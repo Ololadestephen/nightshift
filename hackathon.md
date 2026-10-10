@@ -66,13 +66,18 @@ Local TypeScript/Node 25 service using built-in `node:sqlite`, the `neatlogs` 1.
 - Job `job_89165069-ee50-4412-a193-17c49d737eef`: Sonnet inspected, reclaimed, and escalated with `lease_is_active_cannot_safely_reclaim`. The catalog treated the new lease as active and offered only escalation. That ordering was fixed so a successful reclaim offers `resume_job`. neatlogs `exported`.
 - Job `job_e0dfd0b5-ffd9-4836-b9d8-6bd82569d485`: decision source `model`, outcome `completed`, reason `verified`, 120 minutes, 7 model calls, 2 repairs, 0 corrections. Tools were inspect job, inspect worker, read checkpoint, read errors, reclaim, resume, and verify. neatlogs `exported`. `npm test` passed 23 tests. Desloppify objective 100.0, strict 22.7, with 20 subjective dimensions still unscored.
 
+### 2026-10-10 — first public commit
+
+- Committed `b267311` on `main` and pushed it to https://github.com/Ololadestephen/nightshift. `.env`, local databases, and Entire metadata stayed untracked.
+- `entire checkpoint list` reports 0 checkpoints on `main`. This chat started before the Cursor hooks, so the commit has source history and no agent checkpoint.
+
 ## Demo
 
-Local only. `npm run demo:recover` recovers one labelled stalled report job and verifies the artifact. No public URL, video, neatlogs trace link, Entire checkpoint, or cfo.ai artifact is claimed.
+Local commands recover one labelled stalled report job and verify the artifact. `npm run demo:model` has done that with Sonnet when spend is approved. The public repository is https://github.com/Ololadestephen/nightshift. No public demo URL, video, neatlogs trace link, Entire checkpoint, or cfo.ai artifact is claimed.
 
 ## Known limitations
 
-The working loop is a deterministic controller, not a model decision-maker. neatlogs export, an Entire checkpoint, cfo.ai, the operator UI, a public repo, the video, and submission are still open. Uniqueness is SQLite constraints plus lease compare-and-swap, not exactly-once execution across external systems. No production incidents, customers, outcomes, or revenue exist for this project.
+`npm run demo:recover` uses the deterministic controller. `npm run demo:model` has verified one controlled job with Sonnet, and neatlogs accepted that trace without a public trace link. Entire is enabled and has 0 checkpoints because this session predates the hooks. cfo.ai, the operator UI, the video, and submission are still open. Uniqueness is SQLite constraints plus lease compare-and-swap, not exactly-once execution across external systems. No production incidents, customers, outcomes, or revenue exist for this project.
 
 ## Submission
 
