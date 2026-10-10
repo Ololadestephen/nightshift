@@ -33,6 +33,7 @@ test("the deterministic controller recovers an expired lease and verifies the ar
     env: {},
   });
   assert.equal(result.decision_source, "deterministic_controller");
+  assert.equal(result.model_calls, 0);
   assert.equal(result.outcome, "completed");
   assert.equal(result.verification?.report?.total_minutes, 120);
   assert.equal(result.neatlogs, "disabled_missing_api_key");
@@ -164,7 +165,38 @@ test("step and time budgets stop the loop", async () => {
   });
   assert.equal(limited.reason, "budget_steps");
   assert.equal(limited.tools.length, 2);
+  assert.equal(limited.model_calls, 2);
   assert.equal(getLease(env.database, jobId)?.generation, 1);
+
+  const cappedEnv = workspace();
+  const cappedJob = seedScenario(
+    cappedEnv.database,
+    cappedEnv.clock,
+    cappedEnv.artifacts,
+    "expired_lease",
+  );
+  const cappedModel: ModelClient = {
+    source: "model",
+    decide: () =>
+      Promise.resolve({
+        tool: "inspect_job",
+        arguments: { job_id: cappedJob },
+        rationale: "look again",
+      }),
+  };
+  const capped = await runAgent({
+    database: cappedEnv.database,
+    clock: cappedEnv.clock,
+    artifactDir: cappedEnv.artifacts,
+    jobId: cappedJob,
+    model: cappedModel,
+    limits: { ...DEFAULT_LIMITS, maxModelCalls: 1 },
+    journalDir: null,
+    env: {},
+  });
+  assert.equal(capped.reason, "budget_model");
+  assert.equal(capped.model_calls, 1);
+  assert.equal(capped.tools.length, 1);
 
   const slowEnv = workspace();
   const slowJob = seedScenario(slowEnv.database, slowEnv.clock, slowEnv.artifacts, "expired_lease");

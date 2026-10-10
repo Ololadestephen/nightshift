@@ -107,8 +107,7 @@ async function advanceRun(input: RunAgentInput, state: RunState): Promise<RunSto
   if (budget) {
     return budget;
   }
-  state.modelCalls += 1;
-  if (state.modelCalls > input.limits.maxModelCalls) {
+  if (countsModelCall(input) && state.modelCalls >= input.limits.maxModelCalls) {
     escalate(input, "budget_model");
     return { outcome: "escalated", reason: "budget_model" };
   }
@@ -116,7 +115,14 @@ async function advanceRun(input: RunAgentInput, state: RunState): Promise<RunSto
   if (asked.type === "blocked") {
     return { outcome: "blocked", reason: asked.reason };
   }
+  if (countsModelCall(input)) {
+    state.modelCalls += 1;
+  }
   return applyDecision(input, state, asked.value);
+}
+
+function countsModelCall(input: RunAgentInput): boolean {
+  return input.model.source === "model";
 }
 
 function budgetStop(input: RunAgentInput, state: RunState): RunStop {

@@ -42,6 +42,7 @@ test("environment loading fills missing keys and a model run stays blocked witho
   assert.equal(blocked.outcome, "blocked");
   assert.equal(blocked.reason, "spend_not_approved");
   assert.equal(blocked.decision_source, "model");
+  assert.equal(blocked.model_calls, 0);
   assert.equal(blocked.tools.length, 0);
   const database = openDatabase(join(root, "nightshift.sqlite"));
   try {

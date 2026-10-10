@@ -71,6 +71,14 @@ Local TypeScript/Node 25 service using built-in `node:sqlite`, the `neatlogs` 1.
 - Committed `b267311` on `main` and pushed it to https://github.com/Ololadestephen/nightshift. `.env`, local databases, and Entire metadata stayed untracked.
 - `entire checkpoint list` reports 0 checkpoints on `main`. This chat started before the Cursor hooks, so the commit has source history and no agent checkpoint.
 
+### 2026-10-10 — live model call count
+
+- This session started after the Cursor Entire hooks. `model_calls` now increments only after a client whose source is `model` returns a decision. The deterministic controller reports 0. A `spend_not_approved` refusal reports 0 because the client stops before a request. The model-call budget still stops the loop before another request, and a one-call cap reports `model_calls` 1.
+- No LiteLLM call was made. cfo.ai was not signed up and no payment details were entered. `.env` was not printed or committed.
+- Prettier left `src/agent.ts`, `tests/agent.test.ts`, and `tests/cli.test.ts` unchanged. `npm run typecheck` passed. `npm test` passed 23 tests.
+- Desloppify before the change: objective 100.0, verified 100.0, overall 25.0, strict 22.7. After: objective 100.0, verified 100.0, overall 25.0, strict 22.8. Test-health strict moved from 81.9 to 82.0. Twenty subjective dimensions remain unassessed. `next` asks for that review; no scores were invented and no subagents were spawned.
+- `entire checkpoint list` is run after this change is pushed.
+
 ## Demo
 
 Local commands recover one labelled stalled report job and verify the artifact. `npm run demo:model` has done that with Sonnet when spend is approved. The public repository is https://github.com/Ololadestephen/nightshift. No public demo URL, video, neatlogs trace link, Entire checkpoint, or cfo.ai artifact is claimed.
