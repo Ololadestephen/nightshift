@@ -79,13 +79,28 @@ Local TypeScript/Node 25 service using built-in `node:sqlite`, the `neatlogs` 1.
 - Desloppify before the change: objective 100.0, verified 100.0, overall 25.0, strict 22.7. After: objective 100.0, verified 100.0, overall 25.0, strict 22.8. Test-health strict moved from 81.9 to 82.0. Twenty subjective dimensions remain unassessed. `next` asks for that review; no scores were invented and no subagents were spawned.
 - `entire checkpoint list` is run after this change is pushed.
 
+### 2026-10-10 — Entire checkpoint list after f4ed811
+
+- Pushed `f4ed811` to `origin/main` (`https://github.com/Ololadestephen/nightshift`).
+- `entire checkpoint list` printed:
+
+```
+  branch       main
+  checkpoints  0
+
+No checkpoints found on this branch.
+Checkpoints will appear here after you save changes during an agent session.
+```
+
+- The list is still empty. No second commit was made.
+
 ## Demo
 
 Local commands recover one labelled stalled report job and verify the artifact. `npm run demo:model` has done that with Sonnet when spend is approved. The public repository is https://github.com/Ololadestephen/nightshift. No public demo URL, video, neatlogs trace link, Entire checkpoint, or cfo.ai artifact is claimed.
 
 ## Known limitations
 
-`npm run demo:recover` uses the deterministic controller. `npm run demo:model` has verified one controlled job with Sonnet, and neatlogs accepted that trace without a public trace link. Entire is enabled and has 0 checkpoints because this session predates the hooks. cfo.ai, the operator UI, the video, and submission are still open. Uniqueness is SQLite constraints plus lease compare-and-swap, not exactly-once execution across external systems. No production incidents, customers, outcomes, or revenue exist for this project.
+`npm run demo:recover` uses the deterministic controller. `npm run demo:model` has verified one controlled job with Sonnet, and neatlogs accepted that trace without a public trace link. Entire is enabled. After pushing `f4ed811` from a session that started with the Cursor hooks loaded, `entire checkpoint list` still reports 0 checkpoints on `main`. cfo.ai, the operator UI, the video, and submission are still open. Uniqueness is SQLite constraints plus lease compare-and-swap, not exactly-once execution across external systems. No production incidents, customers, outcomes, or revenue exist for this project.
 
 ## Submission
 
