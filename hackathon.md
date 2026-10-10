@@ -107,13 +107,31 @@ Checkpoints will appear here after you save changes during an agent session.
 - Sanitized spreadsheet exports, with no account email, card data, or tokens: `evidence/cfo/nightshift-main-monthly.xlsx`, `evidence/cfo/nightshift-higher-price-monthly.xlsx`, and `evidence/cfo/nightshift-scenario-comparison.xlsx`. The comparison workbook's Model inputs sheet also shows months outside November 2026–October 2027, including infrastructure in October 2026 and in November–December 2027. Those months are outside the requested horizon. The summary metrics and the two monthly sheets are the 12-month forecast.
 - `entire checkpoint list` is run after this change is pushed.
 
+### 2026-10-10 — Entire checkpoint list after f63e6fd
+
+- Pushed `f63e6fd` to `origin/main`.
+- `entire checkpoint list` printed:
+
+```
+  branch       main
+  checkpoints  2
+
+● 01M4KTYJRB6QACT0GFAP5DCW2E  "Continue Nightshift from origin/main. I have registered f..."
+  10-10 22:19 (f63e6fd) Save the cfo.ai assumption model for Nightshift.
+
+● 01M4KSYQCJZJ7SJ5GDWBMN9T3A  "so what's next?"
+  10-10 22:01 (339cb90) Record that Entire still has no checkpoint after f4ed811.
+```
+
+- These are Entire agent checkpoints, not Nightshift job checkpoints. The earlier `f4ed811` list remains 0.
+
 ## Demo
 
-Local commands recover one labelled stalled report job and verify the artifact. `npm run demo:model` has done that with Sonnet when spend is approved. The public repository is https://github.com/Ololadestephen/nightshift. The cfo.ai assumption model is exported under `evidence/cfo/`. No public demo URL, video, neatlogs trace link, or Entire checkpoint is claimed.
+Local commands recover one labelled stalled report job and verify the artifact. `npm run demo:model` has done that with Sonnet when spend is approved. The public repository is https://github.com/Ololadestephen/nightshift. The cfo.ai assumption model is exported under `evidence/cfo/`. `entire checkpoint list` reports 2 checkpoints on `main`, including `01M4KTYJRB6QACT0GFAP5DCW2E` on `f63e6fd`. No public demo URL, video, or neatlogs trace link is claimed.
 
 ## Known limitations
 
-`npm run demo:recover` uses the deterministic controller. `npm run demo:model` has verified one controlled job with Sonnet, and neatlogs accepted that trace without a public trace link. Entire is enabled. After pushing `f4ed811` from a session that started with the Cursor hooks loaded, `entire checkpoint list` still reports 0 checkpoints on `main`. The cfo.ai model is an assumption forecast, not customers, contracts, or actual revenue. The operator UI, the video, and submission are still open. Uniqueness is SQLite constraints plus lease compare-and-swap, not exactly-once execution across external systems. No production incidents, customers, outcomes, or revenue exist for this project.
+`npm run demo:recover` uses the deterministic controller. `npm run demo:model` has verified one controlled job with Sonnet, and neatlogs accepted that trace without a public trace link. Entire is enabled. The list after `f4ed811` was 0. After `f63e6fd`, `entire checkpoint list` reports 2 checkpoints on `main`: `01M4KTYJRB6QACT0GFAP5DCW2E` and `01M4KSYQCJZJ7SJ5GDWBMN9T3A`. The cfo.ai model is an assumption forecast, not customers, contracts, or actual revenue. The operator UI, the video, and submission are still open. Uniqueness is SQLite constraints plus lease compare-and-swap, not exactly-once execution across external systems. No production incidents, customers, outcomes, or revenue exist for this project.
 
 ## Submission
 
