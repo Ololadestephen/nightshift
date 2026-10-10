@@ -1,0 +1,12 @@
+{
+  "label": "controlled-demo",
+  "sensitive": false,
+  "description": "Synthetic queue minutes for the Nightshift report pipeline. No people, customers, or payments.",
+  "rows": [
+    { "day": "2026-10-05", "queue": "billing", "status": "closed", "minutes": 40 },
+    { "day": "2026-10-05", "queue": "access", "status": "closed", "minutes": 15 },
+    { "day": "2026-10-06", "queue": "billing", "status": "open", "minutes": 25 },
+    { "day": "2026-10-06", "queue": "access", "status": "closed", "minutes": 10 },
+    { "day": "2026-10-07", "queue": "billing", "status": "closed", "minutes": 30 }
+  ]
+}
