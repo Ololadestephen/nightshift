@@ -10,7 +10,7 @@ Founder confirmed registration; public team name and publishing details not yet 
 
 ## Stack
 
-Local TypeScript/Node 25 service using built-in `node:sqlite`, the `neatlogs` 1.1.28 package, and the `openai` 6.49.0 package. The recovery command uses a deterministic controller. No LiteLLM call has been made. Entire CLI 0.11.4 is enabled for local Cursor capture. cfo.ai is not signed up.
+Local TypeScript/Node 25 service using built-in `node:sqlite`, the `neatlogs` 1.1.28 package, and the `openai` 6.49.0 package. The recovery command uses a deterministic controller. No LiteLLM call has been made. Entire CLI 0.11.4 is enabled for local Cursor capture. cfo.ai has an assumption-only Nightshift model; no card was entered in this session.
 
 ## Build log
 
@@ -94,13 +94,26 @@ Checkpoints will appear here after you save changes during an agent session.
 
 - The list is still empty. No second commit was made.
 
+### 2026-10-10 — cfo.ai assumption model
+
+- Used the existing signed-in cfo.ai workspace. No new account, no payment details, and no LiteLLM call. `.env` was not printed or committed.
+- Asked Ari to build a 12-month model for Nightshift from labeled assumptions only. Ari saved three pages and a separate Scenario named Higher price. Main stayed at the baseline price.
+- Source chat: https://app.cfo.ai/stephen-cfoai-12753144/chat/a1ab855b-b0d4-4b81-a474-2c51f7e46b46
+- Pages: Nightshift — Assumptions `2ac31a36-c6d7-4264-880d-d20de2d99a85`; Nightshift — Monthly baseline `b1537945-194b-4a61-ae09-8d99f2e3780a`; Nightshift — Scenario comparison `4b07d4b9-8ac7-4a13-8f21-60138ec92a44`. Higher price scenario id `4ff8a7f0-e9f8-4583-a7c7-984adf3df060`.
+- Assumptions, all labeled and not actuals: price 49 USD per paid run on Main and 79 USD on Higher price; paid runs 0 in November 2026 and 20 per month from December 2026 through October 2027; model cost 0.15 USD per paid run; infrastructure 25 USD per month; starting cash 0. No customers, contracts, payroll, taxes, churn, financing, or collections delay. Revenue is price times paid runs. Cash in equals that revenue. Cash out equals model cost plus infrastructure.
+- Main monthly sheet, November 2026 through October 2027: November ending cash -25 USD; each later month adds 952 USD; October ending cash 10,447 USD. Twelve-month assumed revenue 10,780 USD. Twelve-month assumed total cost 333 USD.
+- Higher price changes only price. Paid runs, model cost, and infrastructure match Main. December revenue is 1,580 USD and each later operating result is 1,552 USD. October ending cash 17,047 USD. Twelve-month assumed revenue 17,380 USD. Twelve-month assumed total cost stays 333 USD. Variance versus Main is 6,600 USD of assumed revenue and October cash.
+- Runway is 0 funded months in both cases because November ending cash is negative. Later positive cash does not remove that gap. No financing was added.
+- Sanitized spreadsheet exports, with no account email, card data, or tokens: `evidence/cfo/nightshift-main-monthly.xlsx`, `evidence/cfo/nightshift-higher-price-monthly.xlsx`, and `evidence/cfo/nightshift-scenario-comparison.xlsx`. The comparison workbook's Model inputs sheet also shows months outside November 2026–October 2027, including infrastructure in October 2026 and in November–December 2027. Those months are outside the requested horizon. The summary metrics and the two monthly sheets are the 12-month forecast.
+- `entire checkpoint list` is run after this change is pushed.
+
 ## Demo
 
-Local commands recover one labelled stalled report job and verify the artifact. `npm run demo:model` has done that with Sonnet when spend is approved. The public repository is https://github.com/Ololadestephen/nightshift. No public demo URL, video, neatlogs trace link, Entire checkpoint, or cfo.ai artifact is claimed.
+Local commands recover one labelled stalled report job and verify the artifact. `npm run demo:model` has done that with Sonnet when spend is approved. The public repository is https://github.com/Ololadestephen/nightshift. The cfo.ai assumption model is exported under `evidence/cfo/`. No public demo URL, video, neatlogs trace link, or Entire checkpoint is claimed.
 
 ## Known limitations
 
-`npm run demo:recover` uses the deterministic controller. `npm run demo:model` has verified one controlled job with Sonnet, and neatlogs accepted that trace without a public trace link. Entire is enabled. After pushing `f4ed811` from a session that started with the Cursor hooks loaded, `entire checkpoint list` still reports 0 checkpoints on `main`. cfo.ai, the operator UI, the video, and submission are still open. Uniqueness is SQLite constraints plus lease compare-and-swap, not exactly-once execution across external systems. No production incidents, customers, outcomes, or revenue exist for this project.
+`npm run demo:recover` uses the deterministic controller. `npm run demo:model` has verified one controlled job with Sonnet, and neatlogs accepted that trace without a public trace link. Entire is enabled. After pushing `f4ed811` from a session that started with the Cursor hooks loaded, `entire checkpoint list` still reports 0 checkpoints on `main`. The cfo.ai model is an assumption forecast, not customers, contracts, or actual revenue. The operator UI, the video, and submission are still open. Uniqueness is SQLite constraints plus lease compare-and-swap, not exactly-once execution across external systems. No production incidents, customers, outcomes, or revenue exist for this project.
 
 ## Submission
 
