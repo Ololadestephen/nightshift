@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto";
-import type { CheckpointStep, JobStatus } from "./constants.js";
+import { LEASE_HOLDER, type CheckpointStep, type JobStatus } from "./constants.js";
 import type { LeaseState } from "./lease.js";
-import type { ToolDecision } from "./policy.js";
+import { type ToolDecision, type ToolName } from "./policy.js";
+import type { TokenUsage } from "./trace.js";
 
 export interface JobObservation {
   id: string;
@@ -157,7 +158,109 @@ export interface DecisionInput {
   rejection: string | null;
 }
 
+export function remember(memory: AgentMemory, tool: ToolName, output: unknown): void {
+  const record = output as Record<string, unknown>;
+  if (tool === "inspect_job") {
+    memory.job = output as JobObservation;
+    adoptRecoveredLease(memory);
+    return;
+  }
+  if (tool === "inspect_worker") {
+    memory.worker = output as WorkerObservation;
+    adoptRecoveredLease(memory);
+    return;
+  }
+  if (tool === "read_checkpoint") {
+    memory.checkpoint = output as CheckpointObservation;
+    return;
+  }
+  if (tool === "read_recent_errors") {
+    rememberErrors(memory, record);
+    return;
+  }
+  if (tool === "reclaim_expired_lease") {
+    rememberReclaim(memory, record);
+    return;
+  }
+  if (tool === "resume_job") {
+    rememberResume(memory, record);
+    return;
+  }
+  if (tool === "verify_artifact") {
+    rememberVerification(memory, record);
+  }
+}
+
+function adoptRecoveredLease(memory: AgentMemory): void {
+  const worker = memory.worker;
+  if (memory.reclaimedGeneration !== null || memory.job?.status !== "recovering" || !worker) {
+    return;
+  }
+  if (
+    worker.lease_state === "active" &&
+    worker.generation !== null &&
+    worker.holder === LEASE_HOLDER
+  ) {
+    memory.reclaimedGeneration = worker.generation;
+  }
+}
+
+function rememberErrors(memory: AgentMemory, record: Record<string, unknown>): void {
+  const errors = Array.isArray(record.errors) ? record.errors : [];
+  memory.errorsRead = true;
+  memory.recentErrors = errors.map((entry) =>
+    String((entry as { message?: unknown }).message ?? ""),
+  );
+}
+
+function rememberReclaim(memory: AgentMemory, record: Record<string, unknown>): void {
+  if (record.ok !== true || typeof record.generation !== "number") {
+    return;
+  }
+  memory.reclaimedGeneration = record.generation;
+  if (memory.job) {
+    memory.job = { ...memory.job, status: "recovering" };
+  }
+  if (memory.worker) {
+    memory.worker = { ...memory.worker, lease_state: "active", generation: record.generation };
+  }
+}
+
+function rememberResume(memory: AgentMemory, record: Record<string, unknown>): void {
+  if (record.type === "applied" || record.type === "replay") {
+    if (memory.job && isJobStatus(record.status)) {
+      memory.job = { ...memory.job, status: record.status };
+    }
+    return;
+  }
+  if (record.type === "uncertain") {
+    memory.resumeNonce += 1;
+    memory.checkpoint = null;
+    memory.reclaimedGeneration = memory.worker?.generation ?? memory.reclaimedGeneration;
+  }
+}
+
+function rememberVerification(memory: AgentMemory, record: Record<string, unknown>): void {
+  memory.verified = true;
+  if (memory.job && isJobStatus(record.job_status)) {
+    memory.job = { ...memory.job, status: record.job_status };
+  }
+}
+
+function isJobStatus(value: unknown): value is JobStatus {
+  return (
+    value === "queued" ||
+    value === "running" ||
+    value === "stalled" ||
+    value === "recovering" ||
+    value === "verifying" ||
+    value === "completed" ||
+    value === "escalated"
+  );
+}
+
 export interface ModelClient {
   readonly source: "deterministic_controller" | "model";
+  measuredUsage: TokenUsage | null;
   decide(input: DecisionInput): Promise<unknown>;
 }

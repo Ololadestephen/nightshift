@@ -10,7 +10,7 @@ Founder confirmed registration; public team name and publishing details not yet 
 
 ## Stack
 
-Local TypeScript/Node 25 service using built-in `node:sqlite`, the `neatlogs` 1.1.28 package, and the `openai` 6.49.0 package. The recovery command uses a deterministic controller. No LiteLLM call has been made. Entire CLI 0.11.4 is enabled for local Cursor capture. cfo.ai has an assumption-only Nightshift model; no card was entered in this session.
+Local TypeScript/Node 25 service using built-in `node:sqlite`, the `neatlogs` 1.1.28 package, and the `openai` 6.49.0 package. `npm run serve` hosts the workbench and the report worker in one process. Live model runs stay off until `NIGHTSHIFT_SPEND_APPROVED=1`, a server-side LiteLLM key, and both `NIGHTSHIFT_MODEL_BUDGET_USD` and `NIGHTSHIFT_USD_PER_CALL` are set. `npm run demo:recover` uses the deterministic controller. `npm run demo:model` can call LiteLLM when spend is approved; one Sonnet run has verified a controlled job. neatlogs spans wrap the live model and tool calls. Entire CLI checkpoints on `main` are recorded below. cfo.ai has an assumption-only Nightshift model; no card was entered by the agent. The workbench has not been deployed.
 
 ## Build log
 
@@ -125,13 +125,82 @@ Checkpoints will appear here after you save changes during an agent session.
 
 - These are Entire agent checkpoints, not Nightshift job checkpoints. The earlier `f4ed811` list remains 0.
 
+### 2026-10-10 — live traces and a fresh recovery
+
+- neatlogs spans now wrap the provider call and each tool execution. The post-run replay of stored outputs is gone. The local journal records `duration_ms` for each call. Token usage is copied from the provider usage field; a missing field stays null.
+- A new invocation adopts the active lease when the job is already `recovering` and the holder is `nightshift-worker`, then resumes. A running job with an active lease still escalates.
+- A thrown tool error and an unexpected model error escalate the job and keep a terminal trace. A trace-init failure still returns the recovery result with `export_failed`.
+- After the four observations, the model is offered one legal repair. README, `docs/ARCHITECTURE.md`, and this file's status sections now match the cfo.ai export and the Entire checkpoints. The operator UI, public demo, and video remain open.
+- `npx tsc --noEmit` passed. `npm test` passed 27 tests. Prettier wrote `src/agent.ts` and `src/trace.ts`.
+- Desloppify before the change: objective 100.0, overall 25.0, strict 22.8. A return-type brace briefly flagged `async_no_await` in `src/trace.ts` and dropped objective to 99.9; a named `Traced<T>` type cleared it. After: objective 100.0, verified 100.0, overall 25.0, strict 22.8. Test-health strict is 82.7. Twenty subjective dimensions remain unassessed. `next` asks for that review; no scores were invented and no subagents were spawned.
+- `entire checkpoint list` still reports 3 checkpoints on `main`: `01M4KV0MVX5CM0ZADJNZP1AMEW` on `bb56112`, `01M4KTYJRB6QACT0GFAP5DCW2E` on `f63e6fd`, and `01M4KSYQCJZJ7SJ5GDWBMN9T3A` on `339cb90`. This change is uncommitted, so it has no new checkpoint. No LiteLLM call was made. `.env` was not printed or committed.
+
+### 2026-10-10 — local workbench
+
+- Read `AGENTS.md`, `START_HERE.md`, `PLAN.md`, `README.md`, `docs/ARCHITECTURE.md`, `docs/EVENT_AND_SUBMISSION.md`, and this file before editing. The recovery engine, one recorded Sonnet run, the cfo.ai assumption export, and the three Entire checkpoints on `main` were left in place.
+- UI skills were loaded with `npx ui-skills start`, `categories`, `list --category frontend`, and `get`. Used `dammyjay93/interface-design` and `addyosmani/frontend-ui-engineering`. No landing-page skill and no catalog install. The choices are in `docs/DESIGN.md`.
+- `npm run serve` now serves the workbench from the same process as the worker. A session cookie owns jobs. JSON submission stores a normalized snapshot and hash. The worker writes the report. Nightshift does not check it until a run starts, and a live run is refused until both budget numbers are set. There is no deterministic fallback on that path. `NIGHTSHIFT_LAB=1` is the labelled fault surface.
+- `npx tsc --noEmit` passed. `npm test` passed 36 tests, including HTTP tests against the server, an independent minute sum, and a version-1 database migration. Prettier was run. No LiteLLM call was made. `.env` was not printed.
+- Browser check on `http://127.0.0.1:8791` with a clean environment and the lab flag: invalid day stayed on the form with “Row 0 has an invalid day”; a custom 15-minute and 4-minute submission produced a report of 19 minutes and stayed unchecked; Start Nightshift stayed disabled with the budget explanation; reload kept the same job; the labelled check on an expired hold verified the fixture report (120 minutes) and showed Verified. A 390px-wide layout did not overflow. The automation Tab key did not move focus; the controls are native and the focus rule is in the stylesheet.
+- Desloppify scan of this project only, excludes `node_modules`, `data`, `dist`, `coverage`. Before this application work the recorded scan was objective 100.0, overall 25.0, strict 22.8. After: objective 94.4, verified 94.4, overall 23.6, strict 22.1. Test-health strict is 71.6. Twenty subjective dimensions remain unassessed. `next` asks for that review. No scores were invented and no subagents were spawned. Remaining mechanical findings: `src/app/server.ts` and `tests/http.test.ts` are large; `public/app.css` is one stylesheet; four app modules are marked transitive-only even though the HTTP tests exercise them; a few smell hits remain (`nested_closure`, `stub_function` on `send`, `SESSION_WINDOW_MS`, and `async_no_await` on a test helper that does await).
+- This work is uncommitted, so Entire has no new checkpoint. The three checkpoints on `main` are unchanged. No deploy, push, or submission.
+
+### 2026-10-11 — landing page and operator pages
+
+- User authorized a premium landing page and main application pages, including a palette change. Read the supplied UI Skills catalog's frontend-design, interface-design and better-ui guidance and the installed Sites/Desloppify instructions. No subagents or global skill installations.
+- Built a pale landing page with a labelled recovery illustration, workflow, verification contract and integration context. The dark workspace now has an overview, searchable/filterable jobs, report submission, report detail, activity, a read-only environment page and the existing gated controlled tests. Operator counts and records come from the session-owned API. No invented customers, outcomes, production incidents or metrics.
+- Kept the existing backend authorization, model budget gate and repair policy. Public asset delivery uses an explicit stylesheet/module allowlist under the existing CSP. The landing page does not open a session; the workspace retains the invite gate. No model or neatlogs credentials were loaded in browser QA.
+- `npm test`: 36 passed. `npm run typecheck`, `npm run format:check`, JavaScript syntax checks and `git diff --check`: passed. Initial sandboxed HTTP checks failed with localhost EPERM; the permitted rerun passed. Extended HTTP checks cover public assets, CSP and private-file refusal.
+- Browser QA on an isolated localhost:8792 database: invalid input stayed on the form, a submitted two-row report totalled 19 minutes and remained unchecked, model execution stayed disabled, search/filtering worked, the labelled expired-lease case verified five rows/120 minutes, and the active-lease case escalated with active_lease. The keyboard skip link focused main without routing away. Mobile layout was checked at 320px/390px and desktop at 1280px.
+- Fixed two UI defects found during review: polling now changes the status paragraph rather than the job-ID paragraph; positioned table-header accessibility text no longer creates mobile page overflow. At 390px, page width remains 390px and tables scroll in their own keyboard-focusable region.
+- Desloppify scan/status/next before and after, same project/exclusions. Before: overall 23.6, objective/verified 94.4, strict 22.1. Final: overall 23.7, objective/verified 94.6, strict 22.1. Twenty subjective dimensions remain unassessed. Final scan has 30 open items, including 10 existing mechanical findings. Two intermediate stylesheet findings and the original app.css finding cleared after separating styles by responsibility. No authored exclusions, suppressions, invented scores or wontfix decisions. Optional jscpd boilerplate detection failed; final scans used npm offline mode and disclose that limit.
+- Full validation and score tables: `docs/UI_VALIDATION.md`. Design: `docs/DESIGN.md`. Sanitized screenshots: `data/local/ui-preview/screenshots/landing-desktop.jpg` and `landing-mobile.jpg` (gitignored). These are interface evidence, not sponsor traces.
+- No dependencies installed, sponsor credits spent, accounts changed, deployment, commit, push, video or submission performed. Existing uncommitted work was preserved. The interface session has no new Entire checkpoint.
+
+### 2026-10-11 — next milestone review
+
+- Read the current handoff, README, build record and submission checklist; inspected the working-tree status. No application code, account settings, credentials, model budget or external systems changed.
+- Next milestone: prove the current application with a budget-approved live model run and inspectable neatlogs evidence, including a clearly labelled controlled recovery. The browser lab currently uses the deterministic checker, so it cannot stand in for live-model recovery evidence.
+- Then reconcile genuine failure/fix traces, Entire checkpoint evidence and the existing cfo.ai forecast; harden the shared generator/verifier reference boundary; prepare an authorized clean release, deployment, video and submission. Web check-in and the final Discord cutoff still require confirmation in the record.
+- Current engine/workbench changes remain uncommitted. No commit, push, deployment or submission performed. Documentation-only review; no Desloppify execution.
+
+### 2026-10-11 — budget configuration guidance
+
+- Inspected `.env.example`, the model adapter, application budget gate and CLI paths. Confirmed that `.env` exists without reading or printing its contents.
+- Rechecked https://neatlogs.com/hackathon: the advertised LiteLLM allowance is $20 per checked-in team/solo, shared across the team. Actual remaining credit was not inspected.
+- Recommended a $5 initial testing allocation with a provisional $0.10 reservation per request, configured in the local `.env` only after approval. This yields a total allowance of 50 reserved requests for the application's persistent ledger, less any already reserved. The per-request amount is an assumption, not measured pricing or a guaranteed upper bound.
+- The current application guard enforces request count derived from that estimate, not actual billed dollars. CLI model-demo paths do not use the application's ledger. The isolated UI preview uses an empty environment; the normal `npm run serve` command loads the project `.env`.
+- No secrets read, environment values edited, spending approved, model calls made, or external settings changed. Documentation-only session; no Desloppify execution.
+
+### 2026-10-11 — operator copy cleanup
+
+- User reported setting the budget and requested removing unnecessary wording from the main app. Tightened operator copy only: direct Overview title, shorter empty states and tool/status labels; removed the promotional banner, repeated page eyebrows, metric footnotes, sidebar slogans and long input-step explanations. Kept required input limits, controlled-test labels, verification evidence, failure reasons, unknown model usage and trace-delivery status.
+- Budget wording now says allocation and estimated cost per call, with the estimate-based call allowance explained briefly. The environment page remains read-only. No `.env` values were read or changed, no model calls or spending performed. Browser QA used the existing isolated preview, which intentionally does not load the user's `.env`.
+- Removed styles for deleted UI content. A browser check exposed a light strip under the shortened dark page; `min-height: 100vh` now keeps the canvas filled.
+- `npm test`: 36 passed. Typecheck, full formatting check, frontend JavaScript syntax checks and `git diff --check`: passed. Browser checks covered Overview, supported input fields/limits, an existing verified controlled recovery and the estimate/budget explanations. No new test jobs were created.
+- Desloppify scan/status/next before and after, same project and exclusions. Scores remain overall 23.7, objective/verified 94.6, strict 22.1. No new findings; 30 items remain open, including 20 unassessed subjective dimensions. Optional jscpd boilerplate detection remains unavailable; existing full score tables and limitations are in `docs/UI_VALIDATION.md`. No suppressions, authored-code exclusions or invented scores.
+- Sanitized UI screenshot: `data/local/ui-preview/screenshots/workspace-copy-cleanup.jpg` (gitignored). No deployment, commits, pushes or submission.
+
+### 2026-10-11 — configured server status
+
+- Investigated why the user still saw “Model paused” on port 8792. That isolated UI preview was started with `env: {}` and therefore does not load the project budget or provider credentials.
+- Started the normal server with `NIGHTSHIFT_HOST=127.0.0.1 NIGHTSHIFT_PORT=8787 npm run serve`. Verified its Environment page shows “Model available” and “Ready”, a $10 allocation, a $0.10 per-call estimate, 100 allowed calls and zero reserved calls.
+- No credentials were printed, configuration changed or model requests made. The configured local app is `http://127.0.0.1:8787/#/settings`; port 8792 remains the isolated preview. Documentation-only record; no Desloppify execution.
+
+### 2026-10-11 — authorized commit and push
+
+- User explicitly requested committing and pushing the pending changes. Reviewed the 40 changed/new application, UI, test and documentation files on `main`, targeting `origin` at `https://github.com/Ololadestephen/nightshift.git`.
+- Pre-commit checks passed: all 36 tests, TypeScript, full Prettier check, frontend JavaScript syntax and `git diff --check`. A local credential check found no common credential patterns or matches for configured secret values; values were never displayed. `.env`, runtime SQLite data and `.desloppify/` remain ignored.
+- Entire reports automatic checkpoint pushing disabled (`push_sessions=false`). Existing Cursor sessions are recorded by Entire; this Codex commit is not claimed as a new supported-agent checkpoint. No model calls, deployment or hackathon submission were performed.
+- No application code changed during this release session; the preceding Desloppify results remain the latest code-health assessment. Commit and remote push results are verified and reported after execution.
+
 ## Demo
 
-Local commands recover one labelled stalled report job and verify the artifact. `npm run demo:model` has done that with Sonnet when spend is approved. The public repository is https://github.com/Ololadestephen/nightshift. The cfo.ai assumption model is exported under `evidence/cfo/`. `entire checkpoint list` reports 2 checkpoints on `main`, including `01M4KTYJRB6QACT0GFAP5DCW2E` on `f63e6fd`. No public demo URL, video, or neatlogs trace link is claimed.
+`npm run serve` opens the local workbench. A person can submit their own rows, watch the worker write the report, and download it. Live model checking stays off until the owner sets both budget numbers. The labelled lab, behind `NIGHTSHIFT_LAB=1`, can recover an intentionally stalled fixture with the deterministic checker. `npm run demo:model` has verified one controlled job with Sonnet. The public repository is https://github.com/Ololadestephen/nightshift. The cfo.ai assumption model is exported under `evidence/cfo/`. Entire checkpoints on `main` are listed above. No public demo URL, video, or neatlogs dashboard link is claimed.
 
 ## Known limitations
 
-`npm run demo:recover` uses the deterministic controller. `npm run demo:model` has verified one controlled job with Sonnet, and neatlogs accepted that trace without a public trace link. Entire is enabled. The list after `f4ed811` was 0. After `f63e6fd`, `entire checkpoint list` reports 2 checkpoints on `main`: `01M4KTYJRB6QACT0GFAP5DCW2E` and `01M4KSYQCJZJ7SJ5GDWBMN9T3A`. The cfo.ai model is an assumption forecast, not customers, contracts, or actual revenue. The operator UI, the video, and submission are still open. Uniqueness is SQLite constraints plus lease compare-and-swap, not exactly-once execution across external systems. No production incidents, customers, outcomes, or revenue exist for this project.
+Live model runs are unavailable until `NIGHTSHIFT_MODEL_BUDGET_USD` and `NIGHTSHIFT_USD_PER_CALL` are set, along with the existing spend approval and server-side key. The workbench does not invent a result or switch to the deterministic controller. A healthy submitted job is written by the worker and stays unchecked until a model run verifies it. The verifier and the generator share `aggregate()`; an independent test sums minutes without that function. A fresh agent invocation re-reads evidence rather than restoring hidden reasoning. Uniqueness is SQLite transactions, unique operation and artifact keys, lease compare-and-swap, and one open run per job. That is not exactly-once behavior across external systems. The public deployment, the video, and submission are still open. The cfo.ai model is an assumption forecast: there are no customers, contracts, or actual revenue. No production incidents, customers, outcomes, or revenue exist for this project.
 
 ## Submission
 

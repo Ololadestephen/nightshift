@@ -1,0 +1,221 @@
+@import url("/styles/navigation.css");
+@import url("/styles/overview.css");
+@import url("/styles/panels.css");
+@import url("/styles/jobs.css");
+@import url("/styles/report.css");
+body[data-view="workspace"] {
+  --paper: #141b1b;
+  --paper-raised: #1a2222;
+  --inset: #121a1a;
+  --ink: #eff0e8;
+  --ink-soft: #b1bbb4;
+  --ink-faint: #96a59b;
+  --rule: rgba(221, 236, 225, 0.1);
+  --verified: #9bcba1;
+  --escalated: #f1aaa0;
+  --waiting: #e6bc7c;
+  --alert-bg: #372523;
+  background: var(--paper);
+  color: var(--ink);
+  color-scheme: dark;
+}
+body[data-view="workspace"] main {
+  margin: 0 0 0 224px;
+  padding: 38px 40px 70px;
+  max-width: 1580px;
+}
+@media (max-width: 1150px) {
+  body[data-view="workspace"] main {
+    padding: 30px 25px 50px;
+  }
+  .workspace-header {
+    padding: 0 25px;
+  }
+  .overview-columns {
+    grid-template-columns: 1fr;
+  }
+  .readiness-panel {
+    display: none;
+  }
+  .submit-layout {
+    grid-template-columns: minmax(0, 1fr) 260px;
+    gap: 18px;
+  }
+}
+@media (max-width: 900px) {
+  .sidebar {
+    width: 190px;
+    padding: 25px 13px 16px;
+  }
+  body[data-view="workspace"] main,
+  .workspace-header {
+    margin-left: 190px;
+  }
+  .sidebar .brand {
+    font-size: 21px;
+  }
+  .submit-layout {
+    grid-template-columns: 1fr;
+  }
+  .input-guide {
+    display: block;
+  }
+  .page-heading {
+    align-items: flex-start;
+  }
+  .page-heading h1 {
+    font-size: 26px;
+  }
+  .summary-grid {
+    gap: 12px;
+  }
+  .summary-card {
+    padding: 18px;
+  }
+  .summary-label {
+    font-size: 10px;
+  }
+  .summary-label .icon {
+    display: none;
+  }
+}
+@media (max-width: 650px) {
+  .sidebar {
+    position: static;
+    width: 100%;
+    border-right: 0;
+    border-bottom: 1px solid var(--rule);
+    padding: 18px 20px 0;
+  }
+  .sidebar .brand {
+    margin: 0;
+    padding-bottom: 17px;
+  }
+  .workspace-label,
+  .nav-label,
+  .sidebar-bottom {
+    display: none;
+  }
+  .side-nav {
+    flex-direction: row;
+    gap: 5px;
+    overflow-x: auto;
+    padding-bottom: 12px;
+  }
+  .side-nav a {
+    font-size: 11px;
+    white-space: nowrap;
+    gap: 7px;
+    padding: 10px;
+  }
+  .side-nav a[href="#/new"] {
+    display: none;
+  }
+  .side-nav .icon {
+    width: 15px;
+    height: 15px;
+    flex-basis: 15px;
+  }
+  .workspace-header {
+    margin-left: 0;
+    height: 54px;
+    padding: 0 20px;
+  }
+  body[data-view="workspace"] main {
+    margin-left: 0;
+    padding: 25px 20px 50px;
+  }
+  .page-heading {
+    flex-wrap: wrap;
+    gap: 18px;
+  }
+  .page-heading h1 {
+    font-size: 27px;
+  }
+  .page-heading .muted {
+    font-size: 11px;
+  }
+  .summary-grid {
+    gap: 8px;
+  }
+  .summary-card {
+    padding: 16px 12px;
+  }
+  .summary-card strong {
+    font-size: 30px;
+    margin: 17px 0 12px;
+  }
+  .summary-label {
+    font-size: 9px;
+    min-height: 28px;
+  }
+  .panel-heading {
+    padding: 18px;
+  }
+  .empty-state {
+    padding: 40px 22px;
+  }
+  .table-toolbar {
+    flex-direction: column;
+    padding: 16px;
+  }
+  .table-toolbar select {
+    width: 100%;
+  }
+  .jobs-table th,
+  .jobs-table td {
+    padding: 14px;
+  }
+  .submit-panel,
+  .input-guide {
+    padding: 20px;
+  }
+  .submit-panel .actions {
+    gap: 10px;
+  }
+  .submit-panel .actions button {
+    font-size: 11px;
+    padding: 10px 14px;
+  }
+  .job-head {
+    align-items: flex-start;
+    gap: 14px;
+  }
+  .job-head h1 {
+    font-size: 25px;
+  }
+  .job-head .job-id {
+    max-width: 230px;
+  }
+  .stamp {
+    width: 65px;
+    height: 65px;
+    font-size: 9px;
+  }
+  .detail-panel {
+    padding: 20px;
+  }
+  .setting-row {
+    padding: 20px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .setting-row > strong {
+    text-align: left;
+  }
+  .activity-group {
+    padding: 18px;
+  }
+  .activity-job {
+    font-size: 9px;
+    max-width: 100%;
+  }
+  .activity-group > .badge {
+    margin-left: 0;
+  }
+  .activity-group .record li {
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+}

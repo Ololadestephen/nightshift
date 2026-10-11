@@ -1,12 +1,12 @@
 # Proposed Nightshift architecture
 
-The first slice implements the catalog below in a local Node/SQLite demo. The operator UI, model calls, neatlogs export, and cfo.ai plan are not connected yet. Confirm current primary docs before adding those integrations.
+The local Node/SQLite application implements the catalog below. `npm run serve` hosts the workbench and the worker in one process. Model calls go through the approved LiteLLM gateway only when spend is approved and both `NIGHTSHIFT_MODEL_BUDGET_USD` and `NIGHTSHIFT_USD_PER_CALL` are set. There is no silent fallback to the deterministic controller. neatlogs wraps those live calls. The cfo.ai assumption model is exported under `evidence/cfo/`. Confirm current primary docs before hosting changes or a public repair route.
 
 ## Minimal stack
 
-Strict TypeScript/Node service with runtime-validated schemas, durable SQLite, and a small React/Vite UI served with the API. Single persistent runtime for worker and agent scheduling; avoid serverless storage or request timeouts that silently terminate long jobs. Choose actual libraries and hosting only within authorization.
+Strict TypeScript/Node service with runtime-validated schemas, durable SQLite, and a static workbench served by the same process. Browser requests return after the job or run is recorded. The worker and the agent continue on `setImmediate`. Poll `GET /api/jobs/:id` for progress. Single persistent runtime for worker and agent scheduling; avoid serverless storage or request timeouts that silently terminate long jobs. Choose actual libraries and hosting only within authorization.
 
-Use an actual supported tool-calling model. Direct OpenAI-compatible access through an approved event gateway is a candidate, not a claimed working integration. Adapter separates model selection/usage from execution policy. Official neatlogs SDK instruments runtime. Entire captures build context separately.
+Use a supported tool-calling model through the approved event gateway. The adapter separates model selection from execution policy. The official neatlogs SDK instruments the provider call and each tool execution. Entire captures build context separately from Nightshift job checkpoints.
 
 ## Boundaries
 
@@ -41,11 +41,13 @@ Every worker carries a generation token. Lease reclaim requires an expired, obse
 
 Each mutating operation has a unique idempotency key and persisted outcome. If a tool response is lost, inspect the operation/state before repeating it. Report generation retries reuse completed checkpoints only if input/version hashes still match. Output commit uses unique job/version keys; verify content before acknowledging completion.
 
-Do not promise exactly-once behavior across arbitrary remote systems. The first slice covers this controlled database/artifact environment and documents residual failure boundaries.
+Do not promise exactly-once behavior across arbitrary remote systems. SQLite transactions wrap each mutation. `operations.operation_id` and `artifacts (job_id, pipeline_version)` are unique. Lease reclaim is a compare-and-swap on the observed generation and expiry. One open agent run per job is a partial unique index. A crash after the database commit and before the artifact file is renamed is repaired by publishing the stored body again. A lost response is reconciled from the operation row before the mutation is repeated. Those are the guarantees. They do not extend to an outside system that accepted a request and then lost the reply.
 
 ## Verification contract
 
-Expected deliverable is a structured report built from a frozen labelled input. Verifier checks job ID, input hash, pipeline version, artifact schema, row counts and aggregates against deterministic reference computation. Check content, not merely a worker status or artifact checksum. Hashing wrong content does not make it correct.
+Expected deliverable is a structured report built from the frozen input stored for that job. Verifier checks job ID, input hash, pipeline version, artifact schema, row counts and aggregates against a recomputation from that stored input. Check content, not merely a worker status or artifact checksum. Hashing wrong content does not make it correct.
+
+The verifier and the report generator both call `aggregate()` in `src/report.ts`. An independent test sums the same rows without that function and compares the totals. A shared bug in `aggregate()` would not be caught by the verifier alone.
 
 Completed jobs are not repaired. Wrong/corrupt input, missing permissions, unknown checkpoints, unsupported errors and repeated failures escalate. Partial output is not published as complete.
 

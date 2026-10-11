@@ -85,6 +85,14 @@ export async function modelRecover(
 
 async function main(): Promise<void> {
   loadEnvFile(join(process.cwd(), ".env"), process.env);
+  if (command === "serve") {
+    const { startApp } = await import("./app/server.js");
+    const port = Number(process.env.NIGHTSHIFT_PORT ?? 8787);
+    const host = process.env.NIGHTSHIFT_HOST ?? "127.0.0.1";
+    const app = await startApp({ root, env: process.env, host, port });
+    process.stdout.write(`Nightshift listening at ${app.url}\n`);
+    return;
+  }
   if (command === "demo-recover") {
     print(await demoRecover(root, systemClock, process.env));
     return;
@@ -125,7 +133,7 @@ async function main(): Promise<void> {
       return;
     }
     throw new Error(
-      "Usage: demo-recover | model-recover | seed <expired_lease|active_lease|completed> | recover-model <job-id>",
+      "Usage: serve | demo-recover | model-recover | seed <expired_lease|active_lease|completed> | recover-model <job-id>",
     );
   } finally {
     database.close();

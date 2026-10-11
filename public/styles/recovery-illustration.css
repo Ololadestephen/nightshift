@@ -1,0 +1,193 @@
+.recovery-visual {
+  position: relative;
+  background: #172e29;
+  color: #edf3e7;
+  border-radius: 15px;
+  padding: 22px;
+  overflow: hidden;
+  border: 1px solid #2e443b;
+  box-shadow: 0 20px 50px -25px #14292155;
+}
+.visual-top,
+.visual-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 10px;
+  color: #b5c4b5;
+}
+.visual-top > span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #edf3e7;
+}
+.visual-top .icon {
+  width: 15px;
+  height: 15px;
+}
+.visual-top .mono {
+  font-size: 8px;
+}
+.orbit-scene {
+  height: 307px;
+  position: relative;
+  isolation: isolate;
+}
+.orbit {
+  position: absolute;
+  left: 50%;
+  top: 49%;
+  border: 1px solid #afcdb01f;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+.orbit-one {
+  width: 150px;
+  height: 150px;
+  border-color: #b9d4b738;
+}
+.orbit-two {
+  width: 240px;
+  height: 240px;
+}
+.orbit-three {
+  width: 325px;
+  height: 325px;
+}
+.orbit-axis {
+  position: absolute;
+  left: 50%;
+  top: 49%;
+  height: 1px;
+  width: 380px;
+  background: #b9d4b721;
+  transform: translate(-50%, -50%) rotate(-35deg);
+}
+.orbit-center {
+  position: absolute;
+  left: 50%;
+  top: 49%;
+  transform: translate(-50%, -50%);
+  width: 108px;
+  height: 108px;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  background: #1e3a30;
+  border: 1px solid #587251;
+  box-shadow: 0 0 35px #99bf6c0d;
+}
+.orbit-center .icon {
+  height: 42px;
+  width: 42px;
+  flex-basis: 42px;
+  color: #dfe8c6;
+}
+.orbit-center span {
+  font-size: 10px;
+  letter-spacing: -0.3px;
+}
+.orbit-point {
+  position: absolute;
+  border-radius: 50%;
+}
+.point-one {
+  left: calc(50% + 46px);
+  top: 63%;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  color: #e9f2da;
+  background: #42724c;
+  border: 3px solid #172e29;
+}
+.point-one .icon {
+  width: 15px;
+  height: 15px;
+}
+.point-two {
+  top: 25%;
+  left: calc(50% - 97px);
+  width: 10px;
+  height: 10px;
+  background: #df7f48;
+  box-shadow: 0 0 0 5px #df7f4812;
+}
+.point-three {
+  top: 15%;
+  left: calc(50% + 108px);
+  width: 5px;
+  height: 5px;
+  background: #739565;
+}
+.orbit-label {
+  position: absolute;
+  color: #b4c7b2;
+  font: 8px var(--mono);
+  background: #172e29;
+  padding: 5px;
+}
+.label-one {
+  top: 16%;
+  left: 5%;
+}
+.label-two {
+  right: 2%;
+  bottom: 16%;
+}
+.recovery-receipt {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 17px;
+  border-radius: 9px;
+  background: #223f32;
+  border: 1px solid #79975f3b;
+}
+.receipt-icon {
+  width: 35px;
+  height: 35px;
+  display: grid;
+  place-items: center;
+  background: #345541;
+  border-radius: 6px;
+  color: #bfda99;
+}
+.recovery-receipt strong {
+  font-size: 13px;
+  font-weight: 500;
+  display: block;
+}
+.recovery-receipt div span {
+  display: block;
+  font-size: 9px;
+  color: #b3c7af;
+  margin-top: 3px;
+}
+.recovery-receipt > .icon {
+  margin-left: auto;
+  color: #bbd595;
+  width: 16px;
+}
+.visual-bottom {
+  margin-top: 20px;
+  font-size: 8px;
+}
+.visual-bottom > span:first-child {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.visual-bottom .status-dot {
+  background: #92b36c;
+  width: 4px;
+  height: 4px;
+}

@@ -1,0 +1,155 @@
+.table-scroll {
+  position: relative;
+  overflow-x: auto;
+}
+.jobs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  text-align: left;
+}
+.jobs-table th {
+  color: var(--ink-faint);
+  font-size: 9px;
+  font-weight: 500;
+  padding: 13px 18px;
+  background: #ffffff02;
+  white-space: nowrap;
+}
+.jobs-table td {
+  padding: 19px 18px;
+  border-top: 1px solid var(--rule);
+}
+.jobs-table tr:hover td {
+  background: #ffffff02;
+}
+.jobs-table .faint {
+  font-size: 10px;
+}
+.jobs-table .numeric {
+  text-align: center;
+}
+.job-link {
+  display: flex;
+  gap: 11px;
+  align-items: center;
+  min-width: 175px;
+  min-height: 44px;
+}
+.job-link strong {
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.job-link span > span {
+  display: block;
+  font-size: 9px;
+  margin-top: 4px;
+}
+.file-icon {
+  color: #b9c7b2;
+  background: #27312b;
+  padding: 9px;
+  border: 1px solid var(--rule);
+  border-radius: 5px;
+  display: flex;
+}
+.file-icon .icon {
+  width: 17px;
+  height: 17px;
+}
+.row-open {
+  min-width: 44px;
+  min-height: 44px;
+  display: grid;
+  place-items: center;
+  color: var(--ink-faint);
+}
+.row-open:hover {
+  color: var(--ink);
+}
+.row-open .icon {
+  width: 16px;
+  height: 16px;
+}
+.table-toolbar {
+  padding: 20px;
+  display: flex;
+  gap: 15px;
+  border-bottom: 1px solid var(--rule);
+}
+.search-field {
+  display: flex;
+  align-items: center;
+  position: relative;
+  flex: 1;
+}
+.search-field .icon {
+  position: absolute;
+  left: 13px;
+  width: 16px;
+  height: 16px;
+  color: var(--ink-faint);
+  pointer-events: none;
+}
+.search-field input {
+  padding-left: 40px;
+  font-size: 11px;
+}
+.table-toolbar select {
+  width: 200px;
+  font-size: 11px;
+}
+.table-count {
+  padding: 15px 23px;
+  border-top: 1px solid var(--rule);
+  font-size: 10px;
+}
+.submit-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 24px;
+  align-items: start;
+}
+.submit-panel {
+  padding: 24px;
+}
+.submit-panel .panel-heading {
+  padding: 0 0 20px;
+  margin-bottom: 20px;
+}
+.submit-panel > p {
+  font-size: 12px;
+}
+.submit-panel .field .faint {
+  font-size: 10px;
+  margin-top: 9px;
+}
+.submit-panel .actions {
+  justify-content: space-between;
+  border-top: 1px solid var(--rule);
+  padding-top: 22px;
+}
+.input-guide {
+  padding: 24px;
+}
+.input-guide .panel-heading {
+  padding: 0 0 19px;
+}
+.input-contract {
+  padding-top: 8px;
+}
+.input-contract dl {
+  display: grid;
+  grid-template-columns: 70px 1fr;
+  font-size: 10px;
+  row-gap: 10px;
+}
+.input-contract dt {
+  font-family: var(--mono);
+  color: var(--ink-soft);
+}
+.input-contract dd {
+  margin: 0;
+  color: var(--ink-faint);
+}

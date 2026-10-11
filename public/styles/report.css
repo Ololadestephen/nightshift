@@ -1,0 +1,95 @@
+.detail-breadcrumb {
+  color: var(--ink-faint);
+  font-size: 10px;
+  margin-bottom: 18px;
+}
+.job-head {
+  display: flex;
+  align-items: center;
+  gap: 25px;
+  padding-bottom: 30px;
+  flex-direction: row-reverse;
+  justify-content: space-between;
+}
+.job-head h1 {
+  font-size: 30px;
+}
+.job-head .job-id {
+  font-size: 9px;
+  margin-bottom: 8px;
+  overflow-wrap: anywhere;
+}
+.job-head .lede {
+  font-size: 12px;
+  color: var(--ink-soft);
+  margin-top: 12px;
+  max-width: 650px;
+}
+.stamp {
+  flex-shrink: 0;
+  width: 86px;
+  height: 86px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--waiting);
+  background: #d9aa5708;
+}
+.stamp[data-state="verified"] {
+  color: var(--verified);
+  background: #8bac6b08;
+}
+.stamp[data-state="escalated"] {
+  color: var(--escalated);
+  background: #c76a5708;
+}
+.stamp[data-state="working"] {
+  color: #afd2d2;
+}
+.detail-panel {
+  margin-bottom: 20px;
+  padding: 25px;
+}
+.detail-panel h2 {
+  font-size: 15px;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--rule);
+}
+.detail-panel > p {
+  font-size: 12px;
+  margin: 12px 0;
+}
+.detail-panel > button {
+  margin: 10px 0;
+  font-size: 11px;
+}
+.detail-panel > .button {
+  font-size: 11px;
+}
+ol.record {
+  list-style: none;
+  padding: 0;
+  margin: 15px 0 0;
+}
+ol.record li {
+  position: relative;
+  padding: 13px 10px 13px 26px;
+  font-size: 11px;
+  border-top: 1px solid var(--rule);
+  overflow-wrap: anywhere;
+}
+ol.record li::before {
+  content: "";
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #8aa77b;
+  left: 1px;
+  top: 19px;
+}

@@ -16,6 +16,8 @@ CREATE TABLE IF NOT EXISTS jobs (
   input_json TEXT NOT NULL,
   artifact_id TEXT,
   escalation_reason TEXT,
+  owner_session_id TEXT,
+  auto_finish INTEGER NOT NULL DEFAULT 1,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
@@ -76,6 +78,40 @@ CREATE TABLE IF NOT EXISTS errors (
   source TEXT NOT NULL,
   created_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS sessions (
+  id TEXT PRIMARY KEY,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS agent_runs (
+  id TEXT PRIMARY KEY,
+  job_id TEXT NOT NULL REFERENCES jobs(id),
+  session_id TEXT NOT NULL,
+  status TEXT NOT NULL,
+  reason TEXT,
+  decision_source TEXT,
+  model_calls INTEGER NOT NULL DEFAULT 0,
+  tools_json TEXT NOT NULL,
+  trace_json TEXT NOT NULL,
+  rejections_json TEXT NOT NULL,
+  neatlogs TEXT,
+  trace_id TEXT,
+  usage_json TEXT,
+  verification_json TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS agent_runs_one_open
+  ON agent_runs(job_id)
+  WHERE status IN ('queued', 'running');
+
+CREATE TABLE IF NOT EXISTS budget_ledger (
+  id TEXT PRIMARY KEY,
+  run_id TEXT,
+  created_at TEXT NOT NULL
+);
 `;
 
 export function openDatabase(filePath: string): DatabaseSync {
@@ -116,10 +152,52 @@ function migrate(database: DatabaseSync): void {
     { version: number } | undefined;
   if (!existing) {
     database.exec(SCHEMA);
-    database.prepare("INSERT INTO schema_meta (id, version) VALUES (1, 1)").run();
+    database.prepare("INSERT INTO schema_meta (id, version) VALUES (1, 2)").run();
     return;
   }
-  if (existing.version !== 1) {
+  if (existing.version === 1) {
+    migrateToTwo(database);
+    database.prepare("UPDATE schema_meta SET version = 2 WHERE id = 1").run();
+    return;
+  }
+  if (existing.version !== 2) {
     throw new Error(`Unsupported schema version ${existing.version}.`);
   }
+}
+
+function migrateToTwo(database: DatabaseSync): void {
+  database.exec("ALTER TABLE jobs ADD COLUMN owner_session_id TEXT");
+  database.exec("ALTER TABLE jobs ADD COLUMN auto_finish INTEGER NOT NULL DEFAULT 1");
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS sessions (
+      id TEXT PRIMARY KEY,
+      created_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS agent_runs (
+      id TEXT PRIMARY KEY,
+      job_id TEXT NOT NULL REFERENCES jobs(id),
+      session_id TEXT NOT NULL,
+      status TEXT NOT NULL,
+      reason TEXT,
+      decision_source TEXT,
+      model_calls INTEGER NOT NULL DEFAULT 0,
+      tools_json TEXT NOT NULL,
+      trace_json TEXT NOT NULL,
+      rejections_json TEXT NOT NULL,
+      neatlogs TEXT,
+      trace_id TEXT,
+      usage_json TEXT,
+      verification_json TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS agent_runs_one_open
+      ON agent_runs(job_id)
+      WHERE status IN ('queued', 'running');
+    CREATE TABLE IF NOT EXISTS budget_ledger (
+      id TEXT PRIMARY KEY,
+      run_id TEXT,
+      created_at TEXT NOT NULL
+    );
+  `);
 }

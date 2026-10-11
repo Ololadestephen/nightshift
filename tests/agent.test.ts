@@ -5,11 +5,11 @@ import { DeterministicController, runAgent } from "../src/agent.js";
 import { emptyMemory, type ModelClient } from "../src/controller.js";
 import { seedScenario } from "../src/demo.js";
 import { isNightshiftError } from "../src/errors.js";
+import { reclaimExpiredLease } from "../src/lease.js";
 import { LiteLlmModel, modelConfigFromEnv, toolsForTurn } from "../src/model.js";
-import { toolDescription } from "../src/policy.js";
-import { DEFAULT_LIMITS, TOOL_NAMES } from "../src/policy.js";
-import { insertError } from "../src/store.js";
-import { getLease, requireJob } from "../src/store.js";
+import { DEFAULT_LIMITS, TOOL_NAMES, toolDescription } from "../src/policy.js";
+import { expireLease, getLease, insertError, latestCheckpoint, requireJob } from "../src/store.js";
+import { usageFrom, type TraceOpener, type TraceRuntime } from "../src/trace.js";
 import { workspace } from "./helpers.js";
 
 test("the deterministic controller recovers an expired lease and verifies the artifact", async () => {
@@ -92,6 +92,7 @@ test("an unknown tool and a different job id are rejected before any repair", as
   const jobId = seedScenario(env.database, env.clock, env.artifacts, "expired_lease");
   const hostile: ModelClient = {
     source: "model",
+    measuredUsage: null,
     decide: () =>
       Promise.resolve({
         tool: "run_shell",
@@ -119,6 +120,7 @@ test("an unknown tool and a different job id are rejected before any repair", as
   const otherJob = seedScenario(env2.database, env2.clock, env2.artifacts, "expired_lease");
   const wrongJob: ModelClient = {
     source: "model",
+    measuredUsage: null,
     decide: () =>
       Promise.resolve({
         tool: "reclaim_expired_lease",
@@ -144,14 +146,19 @@ test("an unknown tool and a different job id are rejected before any repair", as
 test("step and time budgets stop the loop", async () => {
   const env = workspace();
   const jobId = seedScenario(env.database, env.clock, env.artifacts, "expired_lease");
+  let look = 0;
   const repeater: ModelClient = {
     source: "model",
-    decide: () =>
-      Promise.resolve({
-        tool: "inspect_job",
+    measuredUsage: null,
+    decide: () => {
+      look += 1;
+      const tool = look === 1 ? "inspect_job" : "inspect_worker";
+      return Promise.resolve({
+        tool,
         arguments: { job_id: jobId },
         rationale: "look again",
-      }),
+      });
+    },
   };
   const limited = await runAgent({
     database: env.database,
@@ -177,6 +184,7 @@ test("step and time budgets stop the loop", async () => {
   );
   const cappedModel: ModelClient = {
     source: "model",
+    measuredUsage: null,
     decide: () =>
       Promise.resolve({
         tool: "inspect_job",
@@ -202,6 +210,7 @@ test("step and time budgets stop the loop", async () => {
   const slowJob = seedScenario(slowEnv.database, slowEnv.clock, slowEnv.artifacts, "expired_lease");
   const slow: ModelClient = {
     source: "model",
+    measuredUsage: null,
     decide: () => {
       slowEnv.clock.advance(DEFAULT_LIMITS.maxElapsedMs + 1);
       return Promise.resolve({
@@ -267,9 +276,184 @@ test("the model client refuses to spend without a key and explicit approval", as
     observation_id: "obs_checkpoint",
   };
   seen.errorsRead = true;
-  assert.deepEqual(toolsForTurn(seen), ["reclaim_expired_lease"]);
+  assert.deepEqual(toolsForTurn(seen), ["reclaim_expired_lease", "escalate_incident"]);
   seen.reclaimedGeneration = 2;
   seen.job = { ...seen.job, status: "recovering" };
   seen.worker = { ...seen.worker, lease_state: "active", generation: 2 };
-  assert.deepEqual(toolsForTurn(seen), ["resume_job"]);
+  assert.deepEqual(toolsForTurn(seen), ["resume_job", "escalate_incident"]);
+  assert.equal(usageFrom(undefined), null);
+  assert.deepEqual(usageFrom({ prompt_tokens: 3, completion_tokens: 1, total_tokens: 4 }), {
+    prompt_tokens: 3,
+    completion_tokens: 1,
+    total_tokens: 4,
+  });
+  assert.equal(usageFrom({ ignored: true }), null);
 });
+
+test("a fresh invocation resumes a recovering job held by this worker", async () => {
+  const env = workspace();
+  const jobId = seedScenario(env.database, env.clock, env.artifacts, "expired_lease");
+  const reclaimed = reclaimExpiredLease(env.database, jobId, 1, env.clock);
+  assert.equal(reclaimed.ok, true);
+  const result = await runAgent({
+    database: env.database,
+    clock: env.clock,
+    artifactDir: env.artifacts,
+    jobId,
+    model: new DeterministicController(),
+    limits: DEFAULT_LIMITS,
+    journalDir: null,
+    env: {},
+  });
+  assert.equal(result.outcome, "completed");
+  assert.equal(result.tools.includes("reclaim_expired_lease"), false);
+  assert.equal(result.tools.includes("resume_job"), true);
+  assert.equal(result.verification?.report?.total_minutes, 120);
+  assert.equal(getLease(env.database, jobId)?.generation, 2);
+});
+
+test("a tool exception becomes a terminal trace and escalation", async () => {
+  const env = workspace();
+  const jobId = seedScenario(env.database, env.clock, env.artifacts, "expired_lease");
+  let step = 0;
+  const model: ModelClient = {
+    source: "model",
+    measuredUsage: null,
+    decide: () => {
+      step += 1;
+      if (step < 5) {
+        const tool = ["inspect_job", "inspect_worker", "read_checkpoint", "read_recent_errors"][
+          step - 1
+        ];
+        return Promise.resolve({
+          tool,
+          arguments: { job_id: jobId },
+          rationale: "Observe the stalled job.",
+        });
+      }
+      if (step === 5) {
+        return Promise.resolve({
+          tool: "reclaim_expired_lease",
+          arguments: { job_id: jobId, observed_generation: 1 },
+          rationale: "The observed lease is expired.",
+        });
+      }
+      const checkpoint = latestCheckpoint(env.database, jobId);
+      expireLease(env.database, jobId, "2020-01-01T00:00:00.000Z");
+      return Promise.resolve({
+        tool: "resume_job",
+        arguments: {
+          job_id: jobId,
+          checkpoint_id: checkpoint?.id,
+          operation_id: "resume_tool_failure_case",
+          generation: 2,
+        },
+        rationale: "Resume after the reclaimed lease expired.",
+      });
+    },
+  };
+  const result = await runAgent({
+    database: env.database,
+    clock: env.clock,
+    artifactDir: env.artifacts,
+    jobId,
+    model,
+    limits: DEFAULT_LIMITS,
+    journalDir: env.dir,
+    env: {},
+  });
+  assert.equal(result.outcome, "escalated");
+  assert.equal(result.reason, "tool_failed");
+  assert.equal(requireJob(env.database, jobId).status, "escalated");
+  const failed = result.trace.find((event) => event.name === "resume_job");
+  assert.equal(failed?.output && (failed.output as { ok?: boolean }).ok, false);
+  assert.equal(typeof failed?.duration_ms, "number");
+  assert.equal(failed?.usage, null);
+});
+
+test("an unexpected model error escalates with a terminal trace", async () => {
+  const env = workspace();
+  const jobId = seedScenario(env.database, env.clock, env.artifacts, "expired_lease");
+  const model: ModelClient = {
+    source: "model",
+    measuredUsage: null,
+    decide: () => Promise.reject(new Error("socket hang up")),
+  };
+  const result = await runAgent({
+    database: env.database,
+    clock: env.clock,
+    artifactDir: env.artifacts,
+    jobId,
+    model,
+    limits: DEFAULT_LIMITS,
+    journalDir: null,
+    env: {},
+  });
+  assert.equal(result.outcome, "escalated");
+  assert.equal(result.reason, "model_decision_failed");
+  assert.equal(requireJob(env.database, jobId).status, "escalated");
+  assert.equal(result.model_calls, 0);
+  assert.equal(result.trace[0]?.name, "model_decision");
+  assert.equal(result.trace[0]?.usage, null);
+  assert.equal(typeof result.trace[0]?.duration_ms, "number");
+});
+
+test("tool instrumentation wraps the live call and a trace outage still recovers", async () => {
+  const env = workspace();
+  const jobId = seedScenario(env.database, env.clock, env.artifacts, "expired_lease");
+  const hooked: string[] = [];
+  const traceOpen: TraceOpener = () => Promise.resolve(recordingRuntime(hooked));
+  const result = await runAgent({
+    database: env.database,
+    clock: env.clock,
+    artifactDir: env.artifacts,
+    jobId,
+    model: new DeterministicController(),
+    limits: DEFAULT_LIMITS,
+    journalDir: null,
+    env: {},
+    traceOpen,
+  });
+  assert.equal(result.outcome, "completed");
+  assert.equal(result.neatlogs, "exported");
+  assert.deepEqual(hooked, result.tools);
+  assert.ok(result.trace.every((event) => typeof event.duration_ms === "number"));
+  assert.ok(result.trace.every((event) => event.usage === null));
+
+  const outage = workspace();
+  const outageJob = seedScenario(outage.database, outage.clock, outage.artifacts, "expired_lease");
+  const failedOpen: TraceOpener = () => Promise.reject(new Error("init failed"));
+  const recovered = await runAgent({
+    database: outage.database,
+    clock: outage.clock,
+    artifactDir: outage.artifacts,
+    jobId: outageJob,
+    model: new DeterministicController(),
+    limits: DEFAULT_LIMITS,
+    journalDir: null,
+    env: { NEATLOGS_API_KEY: "present-but-not-used" },
+    traceOpen: failedOpen,
+  });
+  assert.equal(recovered.outcome, "completed");
+  assert.equal(recovered.neatlogs, "export_failed");
+  assert.equal(recovered.verification?.report?.total_minutes, 120);
+});
+
+function recordingRuntime(hooked: string[]): TraceRuntime {
+  return {
+    traceId: null,
+    async run(body) {
+      return body();
+    },
+    async tool(name, _args, execute) {
+      hooked.push(name);
+      return execute();
+    },
+    wrapClient(client) {
+      return client;
+    },
+    async close() {
+      return undefined;
+    },
+  };
+}

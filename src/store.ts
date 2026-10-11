@@ -11,6 +11,8 @@ export interface JobRecord {
   input_json: string;
   artifact_id: string | null;
   escalation_reason: string | null;
+  owner_session_id: string | null;
+  auto_finish: number;
   created_at: string;
   updated_at: string;
 }
@@ -75,8 +77,8 @@ export function insertJob(database: DatabaseSync, job: JobRecord): void {
     .prepare(
       `INSERT INTO jobs (
         id, status, input_hash, pipeline_version, input_json, artifact_id,
-        escalation_reason, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        escalation_reason, owner_session_id, auto_finish, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
       job.id,
@@ -86,6 +88,8 @@ export function insertJob(database: DatabaseSync, job: JobRecord): void {
       job.input_json,
       job.artifact_id,
       job.escalation_reason,
+      job.owner_session_id,
+      job.auto_finish,
       job.created_at,
       job.updated_at,
     );
@@ -181,6 +185,24 @@ export function insertCheckpoint(database: DatabaseSync, checkpoint: CheckpointR
       checkpoint.payload_json,
       checkpoint.created_at,
     );
+}
+
+export function listCheckpoints(database: DatabaseSync, jobId: string): CheckpointRecord[] {
+  return database
+    .prepare(
+      `SELECT * FROM checkpoints
+       WHERE job_id = ?
+       ORDER BY CASE step
+         WHEN 'input_accepted' THEN 1
+         WHEN 'parsed' THEN 2
+         WHEN 'aggregated' THEN 3
+         WHEN 'artifact_written' THEN 4
+         WHEN 'reconciled' THEN 5
+         ELSE 0
+       END ASC`,
+    )
+    .all(jobId)
+    .map((row) => mapCheckpoint(row));
 }
 
 export function latestCheckpoint(database: DatabaseSync, jobId: string): CheckpointRecord | null {
@@ -317,6 +339,8 @@ function mapJob(row: unknown): JobRecord {
     input_json: asString(record, "input_json"),
     artifact_id: asNullableString(record, "artifact_id"),
     escalation_reason: asNullableString(record, "escalation_reason"),
+    owner_session_id: asNullableString(record, "owner_session_id"),
+    auto_finish: asNumber(record, "auto_finish"),
     created_at: asString(record, "created_at"),
     updated_at: asString(record, "updated_at"),
   };

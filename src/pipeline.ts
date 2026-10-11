@@ -70,6 +70,7 @@ export function createJob(
   database: DatabaseSync,
   rows: unknown,
   clock: Clock,
+  ownerSessionId: string | null = null,
 ): { jobId: string; generation: number } {
   const now = clock.now().toISOString();
   const jobId = `job_${randomUUID()}`;
@@ -87,6 +88,8 @@ export function createJob(
         input_json: canonicalJson(rows),
         artifact_id: null,
         escalation_reason: "invalid_input",
+        owner_session_id: ownerSessionId,
+        auto_finish: 1,
         created_at: now,
         updated_at: now,
       });
@@ -112,6 +115,8 @@ export function createJob(
       input_json: canonicalJson(validated),
       artifact_id: null,
       escalation_reason: null,
+      owner_session_id: ownerSessionId,
+      auto_finish: 1,
       created_at: now,
       updated_at: now,
     });

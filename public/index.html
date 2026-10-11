@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Nightshift — Unfinished work, handled.</title>
+    <meta
+      name="description"
+      content="Investigate stalled report jobs, recover from durable checkpoints, and verify the actual deliverable. The night shift for unfinished work."
+    />
+    <link rel="stylesheet" href="/app.css" />
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <header id="marketing-header" class="marketing-header">
+      <a class="brand" href="#/" aria-label="Nightshift home"
+        ><svg
+          class="brand-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          aria-hidden="true"
+        >
+          <path d="M20.5 13A8.5 8.5 0 0 1 11 3.5 8.5 8.5 0 1 0 20.5 13Z" /></svg
+        >Nightshift<span class="brand-period">.</span></a
+      >
+      <nav aria-label="Main navigation">
+        <a href="#/how-it-works">How it works</a><a href="#/safety">Built-in safety</a
+        ><a href="#/evidence">Evidence</a>
+      </nav>
+      <a class="button small" href="#/desk">Open workspace <span aria-hidden="true">↗</span></a>
+    </header>
+    <aside id="sidebar" class="sidebar" hidden>
+      <a class="brand" href="#/" aria-label="Nightshift home"
+        ><svg
+          class="brand-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          aria-hidden="true"
+        >
+          <path d="M20.5 13A8.5 8.5 0 0 1 11 3.5 8.5 8.5 0 1 0 20.5 13Z" /></svg
+        >Nightshift<span class="brand-period">.</span></a
+      >
+      <div class="workspace-label">
+        <span class="workspace-avatar">N</span>
+        <div>Workspace<span>This session</span></div>
+      </div>
+      <p class="nav-label">Workspace</p>
+      <nav class="side-nav" aria-label="Workspace navigation">
+        <a href="#/desk" data-route="/desk"
+          ><span class="nav-icon" data-icon="grid"></span>Overview</a
+        >
+        <a href="#/jobs" data-route="/jobs"
+          ><span class="nav-icon" data-icon="report"></span>Report jobs</a
+        >
+        <a href="#/activity" data-route="/activity"
+          ><span class="nav-icon" data-icon="activity"></span>Activity</a
+        >
+        <a href="#/new" data-route="/new"
+          ><span class="nav-icon" data-icon="plus"></span>New report</a
+        >
+        <a id="lab-link" href="#/lab" data-route="/lab" hidden
+          ><span class="nav-icon" data-icon="lab"></span>Controlled tests</a
+        >
+      </nav>
+      <div class="sidebar-bottom">
+        <a class="side-setting" href="#/settings" data-route="/settings"
+          ><span class="nav-icon" data-icon="settings"></span>Environment</a
+        >
+        <div class="sidebar-note"><span class="status-dot"></span> Controlled environment</div>
+        <a
+          class="source-link"
+          href="https://github.com/Ololadestephen/nightshift"
+          target="_blank"
+          rel="noopener noreferrer"
+          >Documentation <span aria-hidden="true">↗</span></a
+        >
+        <div class="operator">
+          <span class="operator-avatar">O</span>
+          <div>Operator<span>Local session</span></div>
+        </div>
+      </div>
+    </aside>
+    <header id="workspace-header" class="workspace-header" hidden>
+      <div>
+        <span class="faint">Workspace</span><span class="breadcrumb-divider">/</span
+        ><span id="breadcrumb">Overview</span>
+      </div>
+      <a id="model-state" class="model-state" href="#/settings">Model paused</a>
+    </header>
+    <main id="main" tabindex="-1"><p class="loading-note">Opening Nightshift…</p></main>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

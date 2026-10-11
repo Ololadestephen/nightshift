@@ -1,16 +1,13 @@
 import type { DatabaseSync } from "node:sqlite";
 import { escalate, executeTool } from "./actions.js";
 import type { Clock } from "./clock.js";
-import { type JobStatus } from "./constants.js";
 import {
   decideDeterministic,
   emptyMemory,
+  remember,
   type AgentMemory,
-  type CheckpointObservation,
   type DecisionInput,
-  type JobObservation,
   type ModelClient,
-  type WorkerObservation,
 } from "./controller.js";
 import { isNightshiftError } from "./errors.js";
 import {
@@ -21,9 +18,17 @@ import {
   type ToolDecision,
   type ToolName,
 } from "./policy.js";
+import { toolsForTurn } from "./model.js";
 import { redact } from "./redact.js";
 import { requireJob } from "./store.js";
-import { exportConfiguredTrace, writeJournal, type TraceEvent } from "./trace.js";
+import {
+  currentTrace,
+  elapsedMs,
+  runWithTrace,
+  writeJournal,
+  type TraceEvent,
+  type TraceOpener,
+} from "./trace.js";
 import type { VerificationResult } from "./verifier.js";
 
 export interface AgentRun {
@@ -40,6 +45,7 @@ export interface AgentRun {
   trace: TraceEvent[];
   rejections: string[];
   neatlogs: "disabled_missing_api_key" | "exported" | "export_failed";
+  trace_id: string | null;
   local_journal: string | null;
 }
 
@@ -52,10 +58,12 @@ export interface RunAgentInput {
   limits: Limits;
   journalDir: string | null;
   env: NodeJS.ProcessEnv;
+  traceOpen?: TraceOpener;
 }
 
 export class DeterministicController implements ModelClient {
   readonly source = "deterministic_controller" as const;
+  measuredUsage = null;
 
   decide(input: DecisionInput): Promise<unknown> {
     return Promise.resolve(decideDeterministic(input.jobId, input.memory));
@@ -76,10 +84,42 @@ interface RunState {
   rejection: string | null;
   verification: VerificationResult | null;
   started: number;
+  perfStarted: number;
 }
 
 export async function runAgent(input: RunAgentInput): Promise<AgentRun> {
-  const state: RunState = {
+  const traced = input.traceOpen
+    ? await runWithTrace(input.env, () => executeRun(input), input.traceOpen)
+    : await runWithTrace(input.env, () => executeRun(input));
+  return { ...traced.result, neatlogs: traced.neatlogs };
+}
+
+async function executeRun(input: RunAgentInput): Promise<Omit<AgentRun, "neatlogs">> {
+  const state = newState(input);
+  try {
+    while (state.steps < input.limits.maxSteps) {
+      const stop = await advanceRun(input, state);
+      if (stop) {
+        return materialize(input, state, stop.outcome, stop.reason);
+      }
+    }
+    safeEscalate(input, "budget_steps");
+    return materialize(input, state, "escalated", "budget_steps");
+  } catch (error) {
+    state.trace.push({
+      name: "run",
+      rationale: null,
+      output: failureOutput(error),
+      duration_ms: elapsedMs(state.perfStarted),
+      usage: null,
+    });
+    safeEscalate(input, "run_failed");
+    return materialize(input, state, "escalated", "run_failed");
+  }
+}
+
+function newState(input: RunAgentInput): RunState {
+  return {
     memory: emptyMemory(),
     tools: [],
     trace: [],
@@ -91,15 +131,8 @@ export async function runAgent(input: RunAgentInput): Promise<AgentRun> {
     rejection: null,
     verification: null,
     started: input.clock.now().getTime(),
+    perfStarted: performance.now(),
   };
-  while (state.steps < input.limits.maxSteps) {
-    const stop = await advanceRun(input, state);
-    if (stop) {
-      return finishRun(input, state, stop.outcome, stop.reason);
-    }
-  }
-  escalate(input, "budget_steps");
-  return finishRun(input, state, "escalated", "budget_steps");
 }
 
 async function advanceRun(input: RunAgentInput, state: RunState): Promise<RunStop> {
@@ -115,10 +148,13 @@ async function advanceRun(input: RunAgentInput, state: RunState): Promise<RunSto
   if (asked.type === "blocked") {
     return { outcome: "blocked", reason: asked.reason };
   }
+  if (asked.type === "stopped") {
+    return { outcome: asked.outcome, reason: asked.reason };
+  }
   if (countsModelCall(input)) {
     state.modelCalls += 1;
   }
-  return applyDecision(input, state, asked.value);
+  return await applyDecision(input, state, asked.value);
 }
 
 function countsModelCall(input: RunAgentInput): boolean {
@@ -136,28 +172,57 @@ function budgetStop(input: RunAgentInput, state: RunState): RunStop {
   return null;
 }
 
-type Asked = { type: "decision"; value: unknown } | { type: "blocked"; reason: string };
+type Asked =
+  | { type: "decision"; value: unknown }
+  | { type: "blocked"; reason: string }
+  | { type: "stopped"; outcome: "escalated"; reason: string };
 
 async function askModel(input: RunAgentInput, state: RunState): Promise<Asked> {
+  const started = performance.now();
   try {
-    return {
-      type: "decision",
-      value: await input.model.decide({
-        jobId: input.jobId,
-        memory: state.memory,
-        rejection: state.rejection,
-      }),
-    };
+    const value = await input.model.decide({
+      jobId: input.jobId,
+      memory: state.memory,
+      rejection: state.rejection,
+    });
+    recordModel(input, state, started, { ok: true }, input.model.measuredUsage);
+    return { type: "decision", value };
   } catch (error) {
     const blocked = blockedModelReason(error);
+    const code = blocked ?? "model_decision_failed";
+    recordModel(input, state, started, { ok: false, code }, null);
     if (blocked) {
       return { type: "blocked", reason: blocked };
     }
-    throw error;
+    safeEscalate(input, "model_decision_failed");
+    return { type: "stopped", outcome: "escalated", reason: "model_decision_failed" };
   }
 }
 
-function applyDecision(input: RunAgentInput, state: RunState, raw: unknown): RunStop {
+function recordModel(
+  input: RunAgentInput,
+  state: RunState,
+  started: number,
+  output: { ok: boolean; code?: string },
+  usage: RunState["trace"][number]["usage"],
+): void {
+  if (input.model.source !== "model") {
+    return;
+  }
+  state.trace.push({
+    name: "model_decision",
+    rationale: null,
+    output,
+    duration_ms: elapsedMs(started),
+    usage,
+  });
+}
+
+async function applyDecision(
+  input: RunAgentInput,
+  state: RunState,
+  raw: unknown,
+): Promise<RunStop> {
   const screened = screenDecision(raw, input.jobId, state.memory, state.corrections);
   state.corrections = screened.corrections;
   if (screened.type === "retry") {
@@ -178,12 +243,32 @@ function applyDecision(input: RunAgentInput, state: RunState, raw: unknown): Run
       return { outcome: "escalated", reason: "budget_repairs" };
     }
   }
-  const output = executeTool(input, screened.decision, state.memory);
+  const started = performance.now();
+  let output: unknown;
+  try {
+    output = await currentTrace().tool(screened.decision.tool, screened.decision.arguments, () =>
+      executeTool(input, screened.decision, state.memory),
+    );
+  } catch (error) {
+    state.tools.push(screened.decision.tool);
+    state.trace.push({
+      name: screened.decision.tool,
+      rationale: screened.decision.rationale,
+      output: failureOutput(error),
+      duration_ms: elapsedMs(started),
+      usage: null,
+    });
+    state.steps += 1;
+    safeEscalate(input, "tool_failed");
+    return { outcome: "escalated", reason: "tool_failed" };
+  }
   state.tools.push(screened.decision.tool);
   state.trace.push({
     name: screened.decision.tool,
     rationale: screened.decision.rationale,
     output: redact(output),
+    duration_ms: elapsedMs(started),
+    usage: null,
   });
   remember(state.memory, screened.decision.tool, output);
   state.steps += 1;
@@ -197,20 +282,18 @@ function applyDecision(input: RunAgentInput, state: RunState, raw: unknown): Run
   return { outcome: terminal.outcome, reason: terminal.reason };
 }
 
-async function finishRun(
+function materialize(
   input: RunAgentInput,
   state: RunState,
   outcome: AgentRun["outcome"],
   reason: string,
-): Promise<AgentRun> {
-  const job = requireJob(input.database, input.jobId);
-  const neatlogs = await exportConfiguredTrace(input.env, state.trace, input.model.source);
+): Omit<AgentRun, "neatlogs"> {
   return {
     decision_source: input.model.source,
     outcome,
     reason,
     job_id: input.jobId,
-    job_status: job.status,
+    job_status: jobStatus(input),
     verification: state.verification,
     tools: state.tools,
     corrections: state.corrections,
@@ -218,11 +301,34 @@ async function finishRun(
     model_calls: state.modelCalls,
     trace: state.trace,
     rejections: state.rejections,
-    neatlogs,
+    trace_id: currentTrace().traceId,
     local_journal: input.journalDir
       ? writeJournal(input.journalDir, input.jobId, state.trace)
       : null,
   };
+}
+
+function jobStatus(input: RunAgentInput): string {
+  try {
+    return requireJob(input.database, input.jobId).status;
+  } catch {
+    return "unknown";
+  }
+}
+
+function safeEscalate(input: RunAgentInput, reason: string): void {
+  try {
+    escalate(input, reason);
+  } catch {
+    return undefined;
+  }
+}
+
+function failureOutput(error: unknown): { ok: false; code: string } {
+  if (isNightshiftError(error)) {
+    return { ok: false, code: error.code };
+  }
+  return { ok: false, code: "tool_failed" };
 }
 
 function blockedModelReason(error: unknown): string | null {
@@ -232,7 +338,8 @@ function blockedModelReason(error: unknown): string | null {
   if (
     error.code === "model_unavailable" ||
     error.code === "spend_not_approved" ||
-    error.code === "model_request_failed"
+    error.code === "model_request_failed" ||
+    error.code === "budget_cap"
   ) {
     return error.code;
   }
@@ -273,6 +380,17 @@ function screenDecision(
         }
       : { type: "retry", reason: authorized.reason, corrections: next };
   }
+  if (!toolsForTurn(memory).includes(parsed.decision.tool)) {
+    const next = corrections + 1;
+    return next > 1
+      ? {
+          type: "stop",
+          reason: "invalid_model_output",
+          detail: "tool_not_offered",
+          corrections: next,
+        }
+      : { type: "retry", reason: "tool_not_offered", corrections: next };
+  }
   return { type: "run", decision: parsed.decision, corrections };
 }
 
@@ -300,89 +418,4 @@ function terminalOutcome(tool: ToolName, output: unknown): Terminal | null {
     };
   }
   return null;
-}
-
-function remember(memory: AgentMemory, tool: ToolName, output: unknown): void {
-  const record = output as Record<string, unknown>;
-  if (tool === "inspect_job") {
-    memory.job = output as JobObservation;
-    return;
-  }
-  if (tool === "inspect_worker") {
-    memory.worker = output as WorkerObservation;
-    return;
-  }
-  if (tool === "read_checkpoint") {
-    memory.checkpoint = output as CheckpointObservation;
-    return;
-  }
-  if (tool === "read_recent_errors") {
-    rememberErrors(memory, record);
-    return;
-  }
-  if (tool === "reclaim_expired_lease") {
-    rememberReclaim(memory, record);
-    return;
-  }
-  if (tool === "resume_job") {
-    rememberResume(memory, record);
-    return;
-  }
-  if (tool === "verify_artifact") {
-    rememberVerification(memory, record);
-  }
-}
-
-function rememberErrors(memory: AgentMemory, record: Record<string, unknown>): void {
-  const errors = Array.isArray(record.errors) ? record.errors : [];
-  memory.errorsRead = true;
-  memory.recentErrors = errors.map((entry) =>
-    String((entry as { message?: unknown }).message ?? ""),
-  );
-}
-
-function rememberReclaim(memory: AgentMemory, record: Record<string, unknown>): void {
-  if (record.ok !== true || typeof record.generation !== "number") {
-    return;
-  }
-  memory.reclaimedGeneration = record.generation;
-  if (memory.job) {
-    memory.job = { ...memory.job, status: "recovering" };
-  }
-  if (memory.worker) {
-    memory.worker = { ...memory.worker, lease_state: "active", generation: record.generation };
-  }
-}
-
-function rememberResume(memory: AgentMemory, record: Record<string, unknown>): void {
-  if (record.type === "applied" || record.type === "replay") {
-    if (memory.job && isJobStatus(record.status)) {
-      memory.job = { ...memory.job, status: record.status };
-    }
-    return;
-  }
-  if (record.type === "uncertain") {
-    memory.resumeNonce += 1;
-    memory.checkpoint = null;
-    memory.reclaimedGeneration = memory.worker?.generation ?? memory.reclaimedGeneration;
-  }
-}
-
-function rememberVerification(memory: AgentMemory, record: Record<string, unknown>): void {
-  memory.verified = true;
-  if (memory.job && isJobStatus(record.job_status)) {
-    memory.job = { ...memory.job, status: record.job_status };
-  }
-}
-
-function isJobStatus(value: unknown): value is JobStatus {
-  return (
-    value === "queued" ||
-    value === "running" ||
-    value === "stalled" ||
-    value === "recovering" ||
-    value === "verifying" ||
-    value === "completed" ||
-    value === "escalated"
-  );
 }
