@@ -97,8 +97,26 @@ function renderInvite() {
   });
 }
 
-async function render() {
+function stopPolling() {
   window.clearInterval(pollTimer);
+  pollTimer = 0;
+}
+
+function watchJob(jobId, detail) {
+  if (!shouldPoll(detail)) {
+    stopPolling();
+    return;
+  }
+  if (pollTimer) {
+    return;
+  }
+  pollTimer = window.setInterval(() => {
+    void refreshJob(jobId);
+  }, 1000);
+}
+
+async function render() {
+  stopPolling();
   const version = ++navigationVersion;
   const route = location.hash.replace(/^#/, "") || "/";
   const section = ["/how-it-works", "/safety", "/evidence"].includes(route);
@@ -309,16 +327,12 @@ async function renderJob(jobId) {
   );
   main.append(head, grid);
   shown = signature(detail);
-  if (shouldPoll(detail)) {
-    pollTimer = window.setInterval(() => {
-      void refreshJob(jobId);
-    }, 1000);
-  }
+  watchJob(jobId, detail);
 }
 
 async function refreshJob(jobId) {
   if (location.hash !== `#/jobs/${jobId}`) {
-    window.clearInterval(pollTimer);
+    stopPolling();
     return;
   }
   const activeId = document.activeElement && document.activeElement.id;
@@ -329,9 +343,7 @@ async function refreshJob(jobId) {
   }
   const next = signature(detail);
   if (next === shown) {
-    if (!shouldPoll(detail)) {
-      window.clearInterval(pollTimer);
-    }
+    watchJob(jobId, detail);
     return;
   }
   shown = next;
@@ -356,9 +368,7 @@ async function refreshJob(jobId) {
     const restored = document.getElementById(activeId);
     if (restored) restored.focus();
   }
-  if (!shouldPoll(detail)) {
-    window.clearInterval(pollTimer);
-  }
+  watchJob(jobId, detail);
 }
 
 function workerSection(detail) {
@@ -397,6 +407,7 @@ function agentSection(detail) {
     button.disabled = running || terminal;
     button.addEventListener("click", async () => {
       button.disabled = true;
+      watchJob(detail.job.id, { job: detail.job, run: { status: "running" } });
       const started = await api(`/api/lab/jobs/${detail.job.id}/runs`, {
         method: "POST",
         body: "{}",
@@ -425,6 +436,7 @@ function agentSection(detail) {
   button.disabled = !live.available || running || terminal || workerBusy;
   button.addEventListener("click", async () => {
     button.disabled = true;
+    watchJob(detail.job.id, { job: detail.job, run: { status: "running" } });
     const started = await api(`/api/jobs/${detail.job.id}/runs`, { method: "POST", body: "{}" });
     if (started && started.error) {
       note.textContent = started.message;
@@ -440,7 +452,12 @@ function appendRunLine(section, detail) {
   if (!detail.run) {
     return;
   }
-  const usage = detail.run.usage ? formatUsage(detail.run.usage) : "Model usage unavailable";
+  const open = detail.run.status === "running" || detail.run.status === "queued";
+  const usage = detail.run.usage
+    ? formatUsage(detail.run.usage)
+    : open
+      ? "Token counts appear when the model responds"
+      : "Model usage unavailable";
   section.append(
     el(
       "p",
@@ -521,6 +538,9 @@ function traceNote(run) {
   if (run.neatlogs === "disabled_missing_api_key") {
     return el("p", "Local trace · export disabled.", "faint");
   }
+  if (run.status === "running" || run.status === "queued") {
+    return el("p", "Trace appears when the check finishes.", "faint");
+  }
   return el("p", "Trace ID unavailable.", "faint");
 }
 
@@ -528,6 +548,7 @@ function stampLabel(detail) {
   const state = stampState(detail);
   if (state === "verified") return "Verified";
   if (state === "escalated") return "Stopped";
+  if (state === "checking") return "Checking";
   if (state === "working") return "Writing";
   if (detail.report) return "Unchecked";
   return "Waiting";
@@ -536,6 +557,9 @@ function stampLabel(detail) {
 function stampState(detail) {
   if (detail.job.status === "completed") return "verified";
   if (detail.job.status === "escalated") return "escalated";
+  if (detail.run && (detail.run.status === "running" || detail.run.status === "queued")) {
+    return "checking";
+  }
   if (detail.job.status === "running" || detail.job.status === "queued") return "working";
   return "waiting";
 }
@@ -546,6 +570,9 @@ function sentence(detail) {
   }
   if (detail.job.status === "escalated") {
     return `Escalated${detail.job.escalation_reason ? `: ${detail.job.escalation_reason}` : "."}`;
+  }
+  if (detail.run && (detail.run.status === "running" || detail.run.status === "queued")) {
+    return "Nightshift is checking this report.";
   }
   if (detail.job.status === "running" && detail.worker.lease_state === "active") {
     return "Worker active. Recovery is blocked.";
@@ -569,6 +596,7 @@ function signature(detail) {
     detail.worker.lease_state,
     run.status,
     run.reason,
+    run.model_calls,
     trace,
     detail.report ? detail.report.verified : false,
   ].join("|");
@@ -576,14 +604,11 @@ function signature(detail) {
 
 function shouldPoll(detail) {
   if (!detail || !detail.job) return false;
-  if (
-    detail.job.status === "queued" ||
-    detail.job.status === "running" ||
-    detail.job.status === "recovering"
-  ) {
-    return true;
+  if (detail.job.status === "completed" || detail.job.status === "escalated") {
+    const runStatus = detail.run && detail.run.status;
+    return runStatus === "running" || runStatus === "queued";
   }
-  return Boolean(detail.run && (detail.run.status === "running" || detail.run.status === "queued"));
+  return true;
 }
 
 function liveReason(reason) {

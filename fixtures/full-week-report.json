@@ -1,0 +1,175 @@
+{
+  "label": "full-week",
+  "sensitive": false,
+  "description": "Synthetic queue minutes for a full week. No people, customers, or payments.",
+  "rows": [
+    {
+      "day": "2026-10-05",
+      "queue": "billing",
+      "status": "closed",
+      "minutes": 10
+    },
+    {
+      "day": "2026-10-05",
+      "queue": "billing",
+      "status": "open",
+      "minutes": 4
+    },
+    {
+      "day": "2026-10-05",
+      "queue": "access",
+      "status": "closed",
+      "minutes": 8
+    },
+    {
+      "day": "2026-10-05",
+      "queue": "access",
+      "status": "open",
+      "minutes": 3
+    },
+    {
+      "day": "2026-10-06",
+      "queue": "billing",
+      "status": "closed",
+      "minutes": 11
+    },
+    {
+      "day": "2026-10-06",
+      "queue": "billing",
+      "status": "open",
+      "minutes": 5
+    },
+    {
+      "day": "2026-10-06",
+      "queue": "access",
+      "status": "closed",
+      "minutes": 9
+    },
+    {
+      "day": "2026-10-06",
+      "queue": "access",
+      "status": "open",
+      "minutes": 4
+    },
+    {
+      "day": "2026-10-07",
+      "queue": "billing",
+      "status": "closed",
+      "minutes": 12
+    },
+    {
+      "day": "2026-10-07",
+      "queue": "billing",
+      "status": "open",
+      "minutes": 6
+    },
+    {
+      "day": "2026-10-07",
+      "queue": "access",
+      "status": "closed",
+      "minutes": 10
+    },
+    {
+      "day": "2026-10-07",
+      "queue": "access",
+      "status": "open",
+      "minutes": 5
+    },
+    {
+      "day": "2026-10-08",
+      "queue": "billing",
+      "status": "closed",
+      "minutes": 13
+    },
+    {
+      "day": "2026-10-08",
+      "queue": "billing",
+      "status": "open",
+      "minutes": 7
+    },
+    {
+      "day": "2026-10-08",
+      "queue": "access",
+      "status": "closed",
+      "minutes": 11
+    },
+    {
+      "day": "2026-10-08",
+      "queue": "access",
+      "status": "open",
+      "minutes": 6
+    },
+    {
+      "day": "2026-10-09",
+      "queue": "billing",
+      "status": "closed",
+      "minutes": 14
+    },
+    {
+      "day": "2026-10-09",
+      "queue": "billing",
+      "status": "open",
+      "minutes": 8
+    },
+    {
+      "day": "2026-10-09",
+      "queue": "access",
+      "status": "closed",
+      "minutes": 12
+    },
+    {
+      "day": "2026-10-09",
+      "queue": "access",
+      "status": "open",
+      "minutes": 7
+    },
+    {
+      "day": "2026-10-10",
+      "queue": "billing",
+      "status": "closed",
+      "minutes": 15
+    },
+    {
+      "day": "2026-10-10",
+      "queue": "billing",
+      "status": "open",
+      "minutes": 9
+    },
+    {
+      "day": "2026-10-10",
+      "queue": "access",
+      "status": "closed",
+      "minutes": 13
+    },
+    {
+      "day": "2026-10-10",
+      "queue": "access",
+      "status": "open",
+      "minutes": 8
+    },
+    {
+      "day": "2026-10-11",
+      "queue": "billing",
+      "status": "closed",
+      "minutes": 16
+    },
+    {
+      "day": "2026-10-11",
+      "queue": "billing",
+      "status": "open",
+      "minutes": 10
+    },
+    {
+      "day": "2026-10-11",
+      "queue": "access",
+      "status": "closed",
+      "minutes": 14
+    },
+    {
+      "day": "2026-10-11",
+      "queue": "access",
+      "status": "open",
+      "minutes": 9
+    }
+  ]
+}

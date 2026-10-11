@@ -1,0 +1,11 @@
+{
+  "label": "main-app-sample",
+  "sensitive": false,
+  "description": "Synthetic queue minutes for trying the Nightshift report form. No people, customers, or payments.",
+  "rows": [
+    { "day": "2026-10-08", "queue": "billing", "status": "closed", "minutes": 18 },
+    { "day": "2026-10-08", "queue": "access", "status": "open", "minutes": 6 },
+    { "day": "2026-10-09", "queue": "billing", "status": "open", "minutes": 9 },
+    { "day": "2026-10-10", "queue": "access", "status": "closed", "minutes": 11 }
+  ]
+}

@@ -59,6 +59,17 @@ export interface RunAgentInput {
   journalDir: string | null;
   env: NodeJS.ProcessEnv;
   traceOpen?: TraceOpener;
+  onProgress?: (progress: RunProgress) => void;
+}
+
+export interface RunProgress {
+  decision_source: ModelClient["source"];
+  model_calls: number;
+  tools: string[];
+  trace: TraceEvent[];
+  rejections: string[];
+  verification: VerificationResult | null;
+  trace_id: string | null;
 }
 
 export class DeterministicController implements ModelClient {
@@ -102,6 +113,7 @@ async function executeRun(input: RunAgentInput): Promise<Omit<AgentRun, "neatlog
       if (stop) {
         return materialize(input, state, stop.outcome, stop.reason);
       }
+      input.onProgress?.(snapshot(input, state));
     }
     safeEscalate(input, "budget_steps");
     return materialize(input, state, "escalated", "budget_steps");
@@ -280,6 +292,18 @@ async function applyDecision(
     state.verification = terminal.verification;
   }
   return { outcome: terminal.outcome, reason: terminal.reason };
+}
+
+function snapshot(input: RunAgentInput, state: RunState): RunProgress {
+  return {
+    decision_source: input.model.source,
+    model_calls: state.modelCalls,
+    tools: state.tools,
+    trace: state.trace,
+    rejections: state.rejections,
+    verification: state.verification,
+    trace_id: currentTrace().traceId,
+  };
 }
 
 function materialize(

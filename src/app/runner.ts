@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
-import { DeterministicController, runAgent, type AgentRun } from "../agent.js";
+import { DeterministicController, runAgent, type AgentRun, type RunProgress } from "../agent.js";
 import type { Clock } from "../clock.js";
 import type { ModelClient } from "../controller.js";
 import { STALL_BACKDATE_MS } from "../constants.js";
@@ -201,6 +201,13 @@ async function executeModel(
       limits: { ...DEFAULT_LIMITS, maxModelCalls },
       journalDir: paths.journalDir,
       env: paths.env,
+      onProgress(progress) {
+        try {
+          saveRun(paths.database, runningRun(run, progress, paths.clock.now().toISOString()));
+        } catch {
+          return;
+        }
+      },
     });
     saveRun(paths.database, storedRun(run, result, paths.clock.now().toISOString()));
   } catch (error) {
@@ -218,6 +225,23 @@ async function executeModel(
   }
 }
 
+function runningRun(run: RunRecord, progress: RunProgress, at: string): RunRecord {
+  return {
+    ...run,
+    status: "running",
+    reason: null,
+    decision_source: progress.decision_source,
+    model_calls: progress.model_calls,
+    tools_json: canonicalJson(progress.tools),
+    trace_json: canonicalJson(publicEvents(progress.trace)),
+    rejections_json: canonicalJson(progress.rejections),
+    trace_id: progress.trace_id,
+    usage_json: usageJson(progress.trace),
+    verification_json: progress.verification ? canonicalJson(progress.verification) : null,
+    updated_at: at,
+  };
+}
+
 function storedRun(run: RunRecord, result: AgentRun, at: string): RunRecord {
   return {
     ...run,
@@ -226,18 +250,18 @@ function storedRun(run: RunRecord, result: AgentRun, at: string): RunRecord {
     decision_source: result.decision_source,
     model_calls: result.model_calls,
     tools_json: canonicalJson(result.tools),
-    trace_json: canonicalJson(publicTrace(result)),
+    trace_json: canonicalJson(publicEvents(result.trace)),
     rejections_json: canonicalJson(result.rejections),
     neatlogs: result.neatlogs,
     trace_id: result.trace_id,
-    usage_json: usageJson(result),
+    usage_json: usageJson(result.trace),
     verification_json: result.verification ? canonicalJson(result.verification) : null,
     updated_at: at,
   };
 }
 
-function publicTrace(result: AgentRun): unknown[] {
-  return result.trace.map((event) => ({
+function publicEvents(trace: AgentRun["trace"]): unknown[] {
+  return trace.map((event) => ({
     name: event.name,
     rationale: event.rationale,
     duration_ms: event.duration_ms,
@@ -246,8 +270,8 @@ function publicTrace(result: AgentRun): unknown[] {
   }));
 }
 
-function usageJson(result: AgentRun): string | null {
-  const usage = sumUsage(result.trace.map((event) => event.usage));
+function usageJson(trace: AgentRun["trace"]): string | null {
+  const usage = sumUsage(trace.map((event) => event.usage));
   return usage ? canonicalJson(usage) : null;
 }
 

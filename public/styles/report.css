@@ -47,7 +47,8 @@
   color: var(--escalated);
   background: #c76a5708;
 }
-.stamp[data-state="working"] {
+.stamp[data-state="working"],
+.stamp[data-state="checking"] {
   color: #afd2d2;
 }
 .detail-panel {
