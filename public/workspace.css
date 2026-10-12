@@ -4,13 +4,14 @@
 @import url("/styles/jobs.css");
 @import url("/styles/report.css");
 body[data-view="workspace"] {
-  --paper: #141b1b;
-  --paper-raised: #1a2222;
-  --inset: #121a1a;
-  --ink: #eff0e8;
-  --ink-soft: #b1bbb4;
-  --ink-faint: #96a59b;
-  --rule: rgba(221, 236, 225, 0.1);
+  --paper: #101a23;
+  --paper-raised: #17232f;
+  --paper-soft: #1b2b39;
+  --inset: #0e1821;
+  --ink: #edf3f8;
+  --ink-soft: #bdccd8;
+  --ink-faint: #92a7b9;
+  --rule: rgba(199, 220, 236, 0.11);
   --verified: #9bcba1;
   --escalated: #f1aaa0;
   --waiting: #e6bc7c;

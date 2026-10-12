@@ -1,4 +1,4 @@
-import { badge, formatDate, icon, node, pageHeading } from "./ui.js";
+import { badge, formatDate, icon, node, pageHeading, recoveryStages } from "./ui.js";
 
 export function renderOverview(main, jobs, session) {
   main.append(pageHeading("Overview", "Reports in this session."));
@@ -79,18 +79,19 @@ function jobTable(jobs) {
   wrapper.setAttribute("aria-label", "Report job table");
   const table = node("table", "", "jobs-table");
   table.innerHTML =
-    '<caption class="sr-only">Report jobs in this session</caption><thead><tr><th scope="col">Report job</th><th scope="col">Status</th><th scope="col">Rows</th><th scope="col">Created</th><th scope="col"><span class="sr-only">Open</span></th></tr></thead>';
+    '<caption class="sr-only">Report jobs in this session</caption><thead><tr><th scope="col">Report</th><th scope="col">Status</th><th scope="col" class="numeric">Input rows</th><th scope="col">Created</th><th scope="col"><span class="sr-only">Open</span></th></tr></thead>';
   const body = node("tbody");
   for (const job of jobs) {
     const row = node("tr");
     const name = node("td");
     const link = node("a", "", "job-link");
     link.href = `#/jobs/${job.id}`;
+    link.title = job.id;
     link.innerHTML = `<span class="file-icon">${icon("report")}</span>`;
     const copy = node("span");
     copy.append(
       node("strong", "Queue activity report"),
-      node("span", job.id.slice(0, 16), "mono faint"),
+      node("span", `${job.id.slice(0, 12)}…${job.id.slice(-6)}`, "mono faint"),
     );
     link.append(copy);
     name.append(link);
@@ -114,6 +115,31 @@ function jobTable(jobs) {
   table.append(body);
   wrapper.append(table);
   return wrapper;
+}
+
+export function renderRecoveryTimeline(detail) {
+  const section = node("section", "", "panel recovery-path");
+  const head = node("div", "", "recovery-path-heading");
+  head.append(node("h2", "Recovery path"), node("p", "From the saved record", "faint"));
+  const list = node("ol", "", "recovery-stages");
+  for (const stage of recoveryStages(detail)) {
+    const item = node("li", "", "recovery-stage");
+    item.dataset.state = stage.state;
+    const mark = node("span", "", "stage-mark");
+    mark.innerHTML = icon(
+      stage.state === "complete" ? "check" : stage.state === "uncertain" ? "clock" : "activity",
+    );
+    const copy = node("div", "", "stage-copy");
+    copy.append(
+      node("span", stage.title, "stage-title"),
+      node("strong", stage.label),
+      node("p", stage.note),
+    );
+    item.append(mark, copy);
+    list.append(item);
+  }
+  section.append(head, list);
+  return section;
 }
 
 export async function renderActivity(main, jobs, api, toolLabels) {

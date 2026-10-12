@@ -5,50 +5,50 @@
 .jobs-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 11px;
+  font-size: 13px;
   text-align: left;
 }
 .jobs-table th {
   color: var(--ink-faint);
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 500;
-  padding: 13px 18px;
+  padding: 16px 24px;
   background: #ffffff02;
   white-space: nowrap;
 }
 .jobs-table td {
-  padding: 19px 18px;
+  padding: 16px 24px;
   border-top: 1px solid var(--rule);
 }
 .jobs-table tr:hover td {
   background: #ffffff02;
 }
 .jobs-table .faint {
-  font-size: 10px;
+  font-size: 12px;
 }
 .jobs-table .numeric {
   text-align: center;
 }
 .job-link {
   display: flex;
-  gap: 11px;
+  gap: 14px;
   align-items: center;
   min-width: 175px;
   min-height: 44px;
 }
 .job-link strong {
-  font-size: 11px;
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 600;
   white-space: nowrap;
 }
 .job-link span > span {
   display: block;
-  font-size: 9px;
-  margin-top: 4px;
+  font-size: 11px;
+  margin-top: 5px;
 }
 .file-icon {
-  color: #b9c7b2;
-  background: #27312b;
+  color: #bcd9e6;
+  background: #213545;
   padding: 9px;
   border: 1px solid var(--rule);
   border-radius: 5px;
@@ -73,7 +73,7 @@
   height: 16px;
 }
 .table-toolbar {
-  padding: 20px;
+  padding: 16px 24px;
   display: flex;
   gap: 15px;
   border-bottom: 1px solid var(--rule);
@@ -92,18 +92,18 @@
   color: var(--ink-faint);
   pointer-events: none;
 }
-.search-field input {
+.search-field input[type="search"] {
   padding-left: 40px;
-  font-size: 11px;
+  font-size: 13px;
 }
 .table-toolbar select {
   width: 200px;
-  font-size: 11px;
+  font-size: 13px;
 }
 .table-count {
   padding: 15px 23px;
   border-top: 1px solid var(--rule);
-  font-size: 10px;
+  font-size: 12px;
 }
 .submit-layout {
   display: grid;

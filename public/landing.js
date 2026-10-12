@@ -1,20 +1,35 @@
 import { icon } from "./ui.js";
 
+// Frozen values from evidence/runs/failed-ack-live.json; never session or live data.
+export const RECORDED_RECOVERY = Object.freeze({
+  jobId: "job_96c4b30c-5b0a-4af7-af43-94d907a512e9",
+  rows: 5,
+  minutes: 120,
+  modelCalls: 8,
+  source:
+    "https://github.com/Ololadestephen/nightshift/blob/main/evidence/runs/failed-ack-live.json",
+});
+
 export function renderLanding(main) {
   main.innerHTML = `
     <section class="hero">
       <div class="hero-copy">
-        <p class="release-pill"><span class="status-dot"></span> Built for the work that didn’t finish</p>
-        <h1>Unfinished work.<br>Handled.</h1>
-        <p class="hero-description">Meet the night shift for your report jobs. Investigate what stopped, recover safely, and verify the report that actually matters.</p>
-        <div class="hero-actions"><a class="button" href="#/desk">Open workspace ${icon("arrow")}</a><a class="text-link" href="#/how-it-works">See how it works ${icon("arrow")}</a></div>
-        <p class="hero-footnote">A controlled environment. A clear record. A checked result.</p>
+        <p class="release-pill"><span class="status-dot"></span> AI operations for report jobs</p>
+        <h1>Pick up where<br>work stopped.</h1>
+        <p class="hero-description">Nightshift investigates stalled report jobs, resumes from saved checkpoints, and checks the report against its original input.</p>
+        <div class="hero-actions"><a class="button" href="#/desk">Open workspace ${icon("arrow")}</a><a class="text-link" href="https://github.com/Ololadestephen/nightshift/tree/main/evidence" target="_blank" rel="noopener noreferrer">View recovery evidence ${icon("external")}</a></div>
+        <p class="hero-footnote">Application-owned reports. Repairs bounded by policy.</p>
       </div>
-      <div class="recovery-visual" aria-label="Illustration of checkpoint recovery. This is an example, not a live run.">
-        <div class="visual-top"><span>${icon("activity")} Recovery protocol</span><span class="mono">Illustrative run</span></div>
-        <div class="orbit-scene" aria-hidden="true"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="orbit orbit-three"></div><div class="orbit-axis"></div><div class="orbit-center">${icon("moon")}<span>nightshift</span></div><div class="orbit-point point-one">${icon("check")}</div><div class="orbit-point point-two"></div><div class="orbit-point point-three"></div><span class="orbit-label label-one">Checkpoint preserved</span><span class="orbit-label label-two">Result reconciled</span></div>
-        <div class="recovery-receipt"><span class="receipt-icon">${icon("shield")}</span><div><strong>The report, verified.</strong><span>Resume from evidence. Finish with proof.</span></div>${icon("check")}</div>
-        <div class="visual-bottom"><span><i class="status-dot"></i> Bounded by policy</span><span>Observe / recover / verify</span></div>
+      <div class="recovery-visual" aria-label="Recorded controlled Sonnet recovery, not a live or session report.">
+        <div class="visual-top"><span>${icon("activity")} Recovery record</span><span>Recorded Sonnet run</span></div>
+        <div class="snapshot-job"><p class="mono">${RECORDED_RECOVERY.jobId.slice(0, 16)}…</p><h2>Queue activity report</h2></div>
+        <ol class="recovery-route">
+          <li data-state="complete"><span class="route-icon">${icon("check")}</span><div><strong>Parsed work saved</strong><span>The original checkpoint is preserved.</span></div></li>
+          <li data-state="uncertain"><span class="route-icon">${icon("clock")}</span><div><strong>Resume acknowledgement lost</strong><span>Read the new checkpoint before acting again.</span></div></li>
+          <li data-state="complete"><span class="route-icon">${icon("shield")}</span><div><strong>Existing report verified</strong><span>One artifact. No repeated resume.</span></div></li>
+        </ol>
+        <div class="artifact-receipt"><div class="receipt-heading"><span>${icon("report")} Report reconciled</span><span class="receipt-state">${icon("check")} Verified</span></div><dl><div><dt>Rows</dt><dd>${RECORDED_RECOVERY.rows}</dd></div><div><dt>Total minutes</dt><dd>${RECORDED_RECOVERY.minutes}</dd></div><div><dt>Mismatches</dt><dd>None</dd></div></dl><p>Totals from the original dataset.</p></div>
+        <div class="visual-bottom"><span>Controlled demonstration · ${RECORDED_RECOVERY.modelCalls} model calls</span><a href="${RECORDED_RECOVERY.source}" target="_blank" rel="noopener noreferrer">Inspect record ${icon("external")}</a></div>
       </div>
     </section>
     <div class="principle-strip"><span>Completion is more than a restart.</span><span>${icon("shield")} Policy before action</span><span>${icon("clock")} Durable checkpoints</span><span>${icon("check")} Artifact verification</span></div>

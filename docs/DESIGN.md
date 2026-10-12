@@ -1,6 +1,18 @@
 # Nightshift interface
 
-## Current direction — October 11, 2026
+## Seesaw polish direction — October 12, 2026
+
+The owner approved the focused landing/jobs/recovery-detail pass after reviewing Seesaw's Linear and Antimetal references. This is a local edit to the existing Node application; no Sites registration or hosting change. The prior app behavior and session-owned API remain authoritative.
+
+The operator comes to recover an unfinished report and decide whether its deliverable can be trusted. Domain vocabulary: saved work, checkpoints, lease ownership, uncertain acknowledgement, reconciliation, escalation. The signature is a continuous saved-work/action/verification rail, with an uncertain action kept visible even when the artifact verifies. The landing hero uses the actual published Sonnet acknowledgement-loss record, labelled recorded/controlled. The workspace derives each rail from saved API observations, never from invented sample jobs.
+
+Color world: daylight paper, blue-ink report receipts, a dark night-shift desk, pale-blue attention/focus, restrained amber uncertainty and green confirmed verification. Tokens: paper `#f5f8fb`, ink `#16334a`, signal `#2f789f`, workspace `#101a23`, raised workspace `#17232f`, pale blue `#bcd9e6`. Avenir Next remains the local primary font; monospace is reserved for identifiers and evidence. Body/control sizes 13–15px, metadata 11–12px, workspace headings 30–36px, landing display 64–80px. Four/eight-pixel spacing; dense 16px control zones and more open 24–32px outcome panels.
+
+Landing hierarchy: left-aligned purpose/action, then a raised white report receipt over a blue-ink recovery panel. The receipt carries actual report totals and verification; source labels and the evidence link make the recorded state explicit. Jobs hierarchy: report identity, status, then quieter input/date metadata, with native search/filter controls and a truthful unverified state. Detail hierarchy: report outcome first, saved-work rail second, worker/agent/record/download panels after it. Shared tokens, quiet borders and restrained depth replace the orbit illustration and unrelated warm accents; no added motion or decorative metrics.
+
+References: https://www.seesaw.website/websites/linear-v2 and https://www.seesaw.website/websites/antimetal-v3. Frontend-design guides the landing composition; interface-design guides density, hierarchy, states and shared patterns. Native links/buttons, 44px touch targets, visible focus and reduced motion continue to apply.
+
+## Previous direction — October 11, 2026
 
 The user requested a premium landing page and the main application pages, with permission to change the palette. This direction supersedes the original paper-and-verification-stamp workbench. The recovery product and its execution boundaries remain the same.
 

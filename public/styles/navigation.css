@@ -33,8 +33,8 @@
 .workspace-avatar {
   width: 28px;
   height: 28px;
-  background: #304136;
-  border: 1px solid #61715566;
+  background: #213545;
+  border: 1px solid var(--rule);
   border-radius: 5px;
   display: grid;
   place-items: center;
@@ -80,8 +80,8 @@
 }
 .side-nav a.active,
 .side-setting.active {
-  background: #e38b5312;
-  color: #f0a079;
+  background: #2f789f24;
+  color: #bcd9e6;
 }
 .sidebar-bottom {
   margin-top: auto;
@@ -126,7 +126,7 @@
 .operator-avatar {
   width: 29px;
   height: 29px;
-  background: #35413a;
+  background: #213545;
   border-radius: 50%;
   display: grid;
   place-items: center;

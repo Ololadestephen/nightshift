@@ -1,4 +1,6 @@
-# UI validation — October 11, 2026
+# Nightshift UI validation
+
+## October 11 baseline
 
 The landing page and operator pages run in the existing local Node application. This session added no dependencies, model requests, sponsor spending, deployment, commits or pushes.
 
@@ -94,3 +96,12 @@ Removed repeated headings, the overview promotional banner, per-metric footnotes
 All 36 tests, type checks, formatting, frontend syntax checks and diff whitespace checks passed again. Browser review covered the compact overview, report input, existing verified recovery evidence and read-only budget page. A light canvas strip exposed by the shorter page was fixed with a full-height body. No live model call was made, and `.env` was not inspected or changed.
 
 Scan/status/next were repeated on the same project. Scores and the 30 existing open items are unchanged from the tables above; optional jscpd remains unverified. Screenshot: `data/local/ui-preview/screenshots/workspace-copy-cleanup.jpg`.
+
+## October 12 — Seesaw-informed polish
+
+- Landing now uses a blue-ink recovery record and a white verification receipt. All five-row/120-minute/eight-call values match `evidence/runs/failed-ack-live.json`. Recorded/controlled labels and evidence links are visible; landing visits do not create sessions or model requests.
+- Jobs have clearer type, full-ID tooltips, stronger status hierarchy, native filters/search and contained table scrolling. Search padding was corrected after visual review found icon/placeholder overlap.
+- Detail pages show saved work, actual action outcome and verification separately. Uncertain acknowledgement remains visible when the report verifies. Failed/mismatched checks take precedence over completion flags. The historical escalated run is not shown as awaiting another repair. Report data uses native disclosure and retains its open/focus state during progress refreshes.
+- Browser QA used isolated `data/local/ui-polish` on port 8794 with empty credentials, labelled deterministic checks and no model budget. A normal two-row/19-minute report stayed unchecked; an expired-lease fixture recovered and verified five rows/120 minutes. No model calls or sponsor credits. Search/no-results/status filter and report disclosure passed. Desktop 1280px, jobs 390px and landing/detail 320px layouts passed; page width matches the phone viewport and table overflow stays contained. Temporary viewport overrides were reset.
+- Screenshots are local under `data/local/ui-polish/qa/`. The owned QA server was stopped; the already-stopped main server was restarted on localhost:8787 with saved configuration. Finished landing verified there. Backend endpoints, schema, budgets and repair controls unchanged.
+- All **46 tests** pass, including five presentation-boundary checks. App typechecking, frontend syntax, formatter and diff checks pass. Same app-scoped Desloppify before/after remains overall/strict 23.7, objective/verified 94.7, 32 open findings. Twenty subjective dimensions remain unassessed; previous findings and offline jscpd limitation remain. No suppressions or score-target cleanup.

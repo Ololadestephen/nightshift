@@ -6,8 +6,8 @@
   padding: 65px 0 100px;
 }
 .proof-preview {
-  background: #e8ede2;
-  border: 1px solid #d6dfcf;
+  background: var(--paper-soft);
+  border: 1px solid var(--rule);
   border-radius: 12px;
   padding: 35px;
 }
@@ -106,8 +106,8 @@
   align-items: center;
   gap: 30px;
   padding: 45px;
-  border: 1px solid #d6dfcf;
-  background: #e8ede2;
+  border: 1px solid var(--rule);
+  background: var(--paper-soft);
   border-radius: 12px;
 }
 .closing-cta h2 {

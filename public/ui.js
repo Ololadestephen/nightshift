@@ -98,3 +98,110 @@ export function setShell(route, session) {
   document.querySelector("#model-state").textContent = live ? "Model available" : "Model paused";
   document.querySelector("#model-state").dataset.ready = Boolean(live);
 }
+
+/** Presentation follows observed outcomes, not the existence of a file. */
+export function verificationState(detail) {
+  const verification = detail.run?.verification;
+  if (
+    verification?.ok === false ||
+    (Array.isArray(verification?.mismatches) && verification.mismatches.length > 0)
+  ) {
+    return "failed";
+  }
+  return detail.report?.verified === true ? "verified" : "pending";
+}
+
+export function recoveryStages(detail) {
+  const checkpoints = Array.isArray(detail.checkpoints) ? detail.checkpoints : [];
+  const checkpoint = checkpoints.at(-1)?.step || detail.worker?.step;
+  const events = Array.isArray(detail.run?.trace) ? detail.run.trace : [];
+  const repairs = events.filter((event) =>
+    ["reclaim_expired_lease", "resume_job"].includes(event.name),
+  );
+  const uncertain = repairs.find((event) => event.output?.type === "uncertain");
+  const lastRepair = repairs.at(-1);
+  const checking = ["running", "queued"].includes(detail.run?.status);
+  const verified = verificationState(detail);
+  let action = { label: "Awaiting action", note: "No recovery action recorded.", state: "pending" };
+  if (uncertain) {
+    action = {
+      label: "Acknowledgement uncertain",
+      note: "The saved result must be inspected before repeating a repair.",
+      state: "uncertain",
+    };
+  } else if (lastRepair?.output?.type === "rejected" || lastRepair?.output?.ok === false) {
+    action = {
+      label: "Action rejected",
+      note: "The failure is kept in the record.",
+      state: "failed",
+    };
+  } else if (lastRepair?.output?.type === "applied" || lastRepair?.output?.type === "replay") {
+    action = {
+      label: "Report resumed",
+      note:
+        detail.job?.status === "escalated"
+          ? "Run escalated after resume."
+          : "Continued from saved work.",
+      state: "complete",
+    };
+  } else if (lastRepair?.output?.ok === true) {
+    action = {
+      label: "Lease reclaimed",
+      note:
+        detail.job?.status === "escalated"
+          ? "Run escalated after reclaim."
+          : "Waiting for the next supported action.",
+      state: detail.job?.status === "escalated" ? "complete" : "active",
+    };
+  } else if (detail.job?.status === "escalated") {
+    action = {
+      label: "Escalated",
+      note: "Run stopped. Review the saved evidence.",
+      state: "failed",
+    };
+  } else if (checking) {
+    action = {
+      label: "Inspecting the report",
+      note: "Nightshift is checking the saved evidence.",
+      state: "active",
+    };
+  } else if (detail.report) {
+    action = { label: "Report written", note: "No recovery action recorded.", state: "complete" };
+  } else if (detail.worker?.lease_state === "active") {
+    action = { label: "Worker active", note: "An active lease stays protected.", state: "active" };
+  }
+  const verification =
+    verified === "verified"
+      ? {
+          label: "Report verified",
+          note: "Original input and artifact checks passed.",
+          state: "complete",
+        }
+      : verified === "failed"
+        ? {
+            label: "Verification failed",
+            note: "Review the recorded verification result.",
+            state: "failed",
+          }
+        : checking && detail.report
+          ? {
+              label: "Checking the report",
+              note: "A written file is awaiting its result.",
+              state: "active",
+            }
+          : {
+              label: "Awaiting verification",
+              note: "Completion requires a checked report.",
+              state: "pending",
+            };
+  return [
+    {
+      title: "Saved work",
+      label: checkpoint ? checkpoint.replaceAll("_", " ") : "No checkpoint yet",
+      note: checkpoint ? "Checkpoint preserved." : "Work has not been saved yet.",
+      state: checkpoint ? "complete" : "pending",
+    },
+    { title: "Action", ...action },
+    { title: "Verification", ...verification },
+  ];
+}

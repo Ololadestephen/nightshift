@@ -12,10 +12,10 @@
   justify-content: space-between;
 }
 .job-head h1 {
-  font-size: 30px;
+  font-size: 34px;
 }
 .job-head .job-id {
-  font-size: 9px;
+  font-size: 11px;
   margin-bottom: 8px;
   overflow-wrap: anywhere;
 }
@@ -30,7 +30,7 @@
   width: 86px;
   height: 86px;
   border: 1px solid currentColor;
-  border-radius: 50%;
+  border-radius: 16px;
   display: grid;
   place-items: center;
   text-align: center;
@@ -56,13 +56,13 @@
   padding: 25px;
 }
 .detail-panel h2 {
-  font-size: 15px;
+  font-size: 17px;
   padding-bottom: 16px;
   margin-bottom: 16px;
   border-bottom: 1px solid var(--rule);
 }
 .detail-panel > p {
-  font-size: 12px;
+  font-size: 13px;
   margin: 12px 0;
 }
 .detail-panel > button {
@@ -72,6 +72,20 @@
 .detail-panel > .button {
   font-size: 11px;
 }
+.report-data {
+  border-top: 1px solid var(--rule);
+  margin-top: 20px;
+}
+.report-data summary {
+  min-height: 44px;
+  padding: 12px 0;
+  font-size: 12px;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.report-data pre {
+  margin-top: 4px;
+}
 ol.record {
   list-style: none;
   padding: 0;
@@ -80,7 +94,7 @@ ol.record {
 ol.record li {
   position: relative;
   padding: 13px 10px 13px 26px;
-  font-size: 11px;
+  font-size: 12px;
   border-top: 1px solid var(--rule);
   overflow-wrap: anywhere;
 }
@@ -93,4 +107,90 @@ ol.record li::before {
   background: #8aa77b;
   left: 1px;
   top: 19px;
+}
+
+.recovery-path {
+  grid-column: 1 / -1;
+  margin-bottom: 24px;
+  padding: 24px;
+}
+.recovery-path-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.recovery-path-heading h2 {
+  font-size: 17px;
+}
+.recovery-stages {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  gap: 24px;
+}
+.recovery-stage {
+  display: flex;
+  align-items: flex-start;
+  min-width: 0;
+  gap: 12px;
+}
+.stage-mark {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  color: var(--ink-faint);
+  background: var(--inset);
+}
+.stage-mark .icon {
+  width: 15px;
+  height: 15px;
+}
+.stage-title {
+  display: block;
+  font-size: 11px;
+  color: var(--ink-faint);
+  margin-bottom: 8px;
+}
+.stage-copy strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.stage-copy p {
+  color: var(--ink-soft);
+  font-size: 12px;
+  margin-top: 6px;
+  line-height: 1.7;
+}
+.recovery-stage[data-state="complete"] .stage-mark {
+  color: var(--verified);
+}
+.recovery-stage[data-state="uncertain"] .stage-mark {
+  color: var(--waiting);
+}
+.recovery-stage[data-state="failed"] .stage-mark {
+  color: var(--escalated);
+}
+.recovery-stage[data-state="active"] .stage-mark {
+  color: #bcd9e6;
+}
+@media (max-width: 760px) {
+  .recovery-stages {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .recovery-path-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 6px;
+  }
 }

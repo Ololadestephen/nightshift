@@ -1,6 +1,12 @@
-import { icon, pageHeading, setShell } from "./ui.js";
+import { icon, pageHeading, setShell, verificationState } from "./ui.js";
 import { renderLanding } from "./landing.js";
-import { renderOverview, renderJobs, renderActivity, renderSettings } from "./workspace.js";
+import {
+  renderOverview,
+  renderJobs,
+  renderActivity,
+  renderSettings,
+  renderRecoveryTimeline,
+} from "./workspace.js";
 
 const EXAMPLE = `{
   "rows": [
@@ -320,6 +326,7 @@ async function renderJob(jobId) {
   head.append(stamp, copy);
   const grid = el("div", "", "detail-grid");
   grid.append(
+    renderRecoveryTimeline(detail),
     workerSection(detail),
     agentSection(detail),
     recordSection(detail),
@@ -336,6 +343,7 @@ async function refreshJob(jobId) {
     return;
   }
   const activeId = document.activeElement && document.activeElement.id;
+  const reportOpen = main.querySelector(".report-data")?.open === true;
   const detail = await api(`/api/jobs/${jobId}`);
   if (location.hash !== `#/jobs/${jobId}`) return;
   if (!detail || detail.error) {
@@ -358,12 +366,16 @@ async function refreshJob(jobId) {
   }
   const fresh = el("div");
   fresh.append(
+    renderRecoveryTimeline(detail),
     workerSection(detail),
     agentSection(detail),
     recordSection(detail),
     reportSection(detail, jobId),
   );
   main.querySelector(".detail-grid")?.replaceChildren(...fresh.children);
+  if (reportOpen && main.querySelector(".report-data")) {
+    main.querySelector(".report-data").open = true;
+  }
   if (activeId) {
     const restored = document.getElementById(activeId);
     if (restored) restored.focus();
@@ -500,10 +512,11 @@ function reportSection(detail, jobId) {
     return section;
   }
   const body = detail.report.body || {};
+  const checked = verificationState(detail) === "verified";
   section.append(
     el(
       "p",
-      `${detail.report.verified ? "Verified" : "Unchecked"} · ${body.row_count ?? "?"} rows · ${body.total_minutes ?? "?"} minutes.`,
+      `${checked ? "Verified" : "Unchecked"} · ${body.row_count ?? "?"} rows · ${body.total_minutes ?? "?"} minutes.`,
     ),
   );
   const verification = detail.run && detail.run.verification;
@@ -513,7 +526,7 @@ function reportSection(detail, jobId) {
     verification.mismatches.length > 0
   ) {
     section.append(el("p", `Mismatches: ${verification.mismatches.join(", ")}.`, "alert"));
-  } else if (detail.report.verified) {
+  } else if (checked) {
     section.append(el("p", "Input, identity, totals and artifact checks passed.", "muted"));
   }
   const download = linkButton("Download report", `/api/jobs/${jobId}/report`, "secondary");
@@ -521,7 +534,12 @@ function reportSection(detail, jobId) {
   section.append(download);
   const pre = document.createElement("pre");
   pre.textContent = JSON.stringify(body, null, 2);
-  section.append(pre);
+  const data = document.createElement("details");
+  data.className = "report-data";
+  const toggle = el("summary", "View report data");
+  toggle.id = "report-data-toggle";
+  data.append(toggle, pre);
+  section.append(data);
   return section;
 }
 
@@ -547,6 +565,7 @@ function traceNote(run) {
 function stampLabel(detail) {
   const state = stampState(detail);
   if (state === "verified") return "Verified";
+  if (verificationState(detail) === "failed") return "Check failed";
   if (state === "escalated") return "Stopped";
   if (state === "checking") return "Checking";
   if (state === "working") return "Writing";
@@ -555,7 +574,9 @@ function stampLabel(detail) {
 }
 
 function stampState(detail) {
-  if (detail.job.status === "completed") return "verified";
+  const checked = verificationState(detail);
+  if (checked === "failed") return "escalated";
+  if (checked === "verified") return "verified";
   if (detail.job.status === "escalated") return "escalated";
   if (detail.run && (detail.run.status === "running" || detail.run.status === "queued")) {
     return "checking";
@@ -565,7 +586,10 @@ function stampState(detail) {
 }
 
 function sentence(detail) {
-  if (detail.job.status === "completed") {
+  if (verificationState(detail) === "failed") {
+    return "Verification failed. Review the recorded mismatches.";
+  }
+  if (verificationState(detail) === "verified") {
     return "Verified against the submitted dataset.";
   }
   if (detail.job.status === "escalated") {
