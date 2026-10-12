@@ -4,3 +4,16 @@ coverage
 data
 .desloppify
 package-lock.json
+
+# Local-only production, planning and coding-agent files
+films
+docs
+.agents
+.cursor
+.entire
+.vercel
+AGENTS.md
+PLAN.md
+START_HERE.md
+hackathon.md
+skills-lock.json

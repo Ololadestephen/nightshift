@@ -111,7 +111,7 @@ Download the actual sanitized cfo.ai exports: [baseline monthly forecast](cfo/ni
 
 ## Verification and reproducibility
 
-Latest application verification: **46 tests passed**, TypeScript passed; [UI validation](../docs/UI_VALIDATION.md#october-12--seesaw-informed-polish) records the five added presentation-boundary checks. The earlier [runtime evidence validation](VALIDATION.md) records its then-current 41 tests, commands, scanner limitations and snapshot hashes.
+Latest application verification: **52 tests passed**, TypeScript passed. The tests cover recovery, failed acknowledgements, lease fencing, public session isolation, budgets and artifact verification. The earlier [runtime evidence validation](VALIDATION.md) preserves its then-current 41 tests, commands, scanner limitations and snapshot hashes.
 
 ```bash
 npm ci
