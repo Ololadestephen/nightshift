@@ -1,8 +1,0 @@
-node_modules/
-out/*
-!out/cues.json
-public/audio/*.wav
-.DS_Store
-*.log
-__pycache__/
-scorecard.png
