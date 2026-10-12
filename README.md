@@ -22,7 +22,7 @@ Live model runs stay off until `NIGHTSHIFT_SPEND_APPROVED=1`, a server-side Lite
 
 neatlogs spans wrap the live model and tool calls when `NEATLOGS_API_KEY` is present, and the local journal records each call's duration. Token usage is copied from the provider response when that response includes it. A missing or failed export leaves the job result in place and is labelled separately. A fresh invocation can resume a job already in `recovering` when this worker still holds the active lease. A tool exception or an unexpected model error escalates the job and keeps a terminal trace.
 
-While a required observation is missing, the request offers those reads. A verifying or completed job is offered only `verify_artifact`. After an uncertain resume acknowledgement, the model reads a new checkpoint; a published checkpoint then offers verification instead of repeating the repair. An expired lease is offered reclaim and escalate. A reclaimed job is offered resume and escalate. An active, missing, or uncertain hold is offered only escalate. That is a bounded workflow for this pipeline. The narrated two-minute video is locally complete; public video upload and deployment remain open. The cfo.ai workbook under `evidence/cfo/` is an assumption forecast. Entire checkpoints are listed in `hackathon.md`. Web check-in and the final Discord cutoff are still open.
+While a required observation is missing, the request offers those reads. A verifying or completed job is offered only `verify_artifact`. After an uncertain resume acknowledgement, the model reads a new checkpoint; a published checkpoint then offers verification instead of repeating the repair. An expired lease is offered reclaim and escalate. A reclaimed job is offered resume and escalate. An active, missing, or uncertain hold is offered only escalate. That is a bounded workflow for this pipeline. The narrated two-minute video is locally complete; public video upload and deployment remain open. The cfo.ai workbook under `evidence/cfo/` is an assumption forecast. Actual Entire checkpoint evidence is under `evidence/entire/`.
 
 ## Run the application
 
@@ -89,6 +89,6 @@ One report-job pipeline, one controlled application, one agent, a small tool cat
 
 Keep this project separate from Mosaic/TestSprite, Chog Déjà Vu and Recourse. No borrowed finished or half-built project code: neatHack requires event-window code.
 
-## Handoff
+## Development
 
-Read START_HERE.md, AGENTS.md, PLAN.md, docs/ARCHITECTURE.md and docs/EVENT_AND_SUBMISSION.md. Track actual build evidence in hackathon.md.
+Read AGENTS.md and docs/ARCHITECTURE.md for project scope and implementation contracts. Public run records and sponsor evidence are indexed in [evidence/README.md](evidence/README.md). Internal build logs and grading notes remain local.

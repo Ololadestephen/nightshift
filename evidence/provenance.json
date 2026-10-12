@@ -35,9 +35,45 @@
         "height": 520
       },
       "asset_sha256": "d3bb6b732917c7e038add3989e2fa512d432b66c8798e54426128c5923cc4f19"
+    },
+    {
+      "asset": "screenshots/neatlogs-incident.png",
+      "source_sha256": "6f440def6442f988d0a9817f28af50df1fc983ccc15580a1020f1782bcb99c89",
+      "source_time_s": 7,
+      "crop": {
+        "x": 565,
+        "y": 145,
+        "width": 1870,
+        "height": 1260
+      },
+      "asset_sha256": "ae4880e54e5e7b6183e043bf380e0996680d25f8afface3afe8f799041fa1879"
+    },
+    {
+      "asset": "screenshots/neatlogs-before-outcome.png",
+      "source_sha256": "6f440def6442f988d0a9817f28af50df1fc983ccc15580a1020f1782bcb99c89",
+      "source_time_s": 24,
+      "crop": {
+        "x": 1080,
+        "y": 920,
+        "width": 1450,
+        "height": 1030
+      },
+      "asset_sha256": "e1839abbe9cbf427b8e71c877d0652d0780f5a1086b2f8d30bf289a70ceb2da2"
+    },
+    {
+      "asset": "screenshots/neatlogs-after-outcome.png",
+      "source_sha256": "6f440def6442f988d0a9817f28af50df1fc983ccc15580a1020f1782bcb99c89",
+      "source_time_s": 42,
+      "crop": {
+        "x": 1080,
+        "y": 340,
+        "width": 1450,
+        "height": 1120
+      },
+      "asset_sha256": "bf605fa9b5249f80a725807354d0dae33ed8deed3de30139529fcb15ba70cbf1"
     }
   ],
-  "privacy": "Exact pixel crops of owner recordings. Browser/account/navigation regions omitted. Both screenshots show initial observations, not final status. Full owner recordings remain local.",
+  "privacy": "Exact pixel crops of owner recordings. Browser/account/navigation regions omitted. Original before/after inspection screenshots show initial observations; the new outcome screenshots show actual escalation and verification outputs. The incident is a retrospective October 12 review. Full owner recordings remain local.",
   "entire": {
     "source_sha256": "3fe63d06b0241a0d5b77bfe20dfef7bd4ede2775240b560407684c9e462b322e",
     "omitted": ["author", "session", "tokens"],

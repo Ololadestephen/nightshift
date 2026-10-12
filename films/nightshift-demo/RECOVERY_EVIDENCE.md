@@ -6,7 +6,7 @@ This is a readable summary of existing local journals, not a new execution or a 
 
 Job: `job_e0dfd0b5-ffd9-4836-b9d8-6bd82569d485`
 
-Source: `data/local/traces/job_e0dfd0b5-ffd9-4836-b9d8-6bd82569d485.json`. The October 10 Sonnet recovery entry in `hackathon.md` records decision source `model`, 7 model calls, 2 repairs and a verified 120-minute artifact.
+Source: [sanitized actual after-run journal](../../evidence/runs/after.json), exported from the original local journal. It records model decisions, reclaim/resume repairs and the verified 120-minute artifact.
 
 | Step | Tool                    | Observed result in the journal                 |
 | ---- | ----------------------- | ---------------------------------------------- |
@@ -22,7 +22,7 @@ Source: `data/local/traces/job_e0dfd0b5-ffd9-4836-b9d8-6bd82569d485.json`. The O
 
 Earlier job: `job_89165069-ee50-4412-a193-17c49d737eef`
 
-Source: `data/local/traces/job_89165069-ee50-4412-a193-17c49d737eef.json` and the October 10 Sonnet recovery entry in `hackathon.md`.
+Source: [sanitized actual before-run journal](../../evidence/runs/before.json), exported from the original local journal.
 
 | Earlier observed behavior                                                                             | Later observed behavior                                                      |
 | ----------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |

@@ -24,5 +24,9 @@ films/*/out/
 films/*/public/audio/*.wav
 films/*/.remotion/
 films/*.mov
+films/nightshift-submission-v6.mp4
 films/*.png
 films/*/public/captures/
+hackathon.md
+docs/JUDGING_REVIEW.md
+films/nightshift-demo/INCIDENT_UPDATE.md

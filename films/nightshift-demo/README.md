@@ -46,7 +46,18 @@ The renderer bundles the source once, renders the local captures and frame-drive
 
 ## Current launch/demo picture edit
 
-The owner-selected white and cool blue cut is `LaunchFilm`, 120 seconds at 1920×1080 / 60 fps. Its source is `src/launch/`; earlier compositions and cuts are preserved. The picture uses source-backed animation and short cropped proof inserts. The completed narrated export is `out/launch-v5/nightshift-launch.mp4`, using the owner-approved local Kokoro `af_heart` voice, with music ducking. Captions are in `out/launch-v5/nightshift-launch.srt`; a separate caption-track MP4 is `out/launch-v5/nightshift-launch-with-captions.mp4`. Player support controls caption display.
+The owner-selected white and cool blue cut is `LaunchFilm`, 120 seconds at 1920×1080 / 60 fps. Its source is `src/launch/`; earlier compositions and cuts are preserved. The completed current export is `out/launch-v6/nightshift-launch.mp4`, with the owner-approved local Kokoro `af_heart` narration and ducked music retained. Captions are in `out/launch-v6/nightshift-launch.srt`; a separate caption-track MP4 is `out/launch-v6/nightshift-launch-with-captions.mp4`. Player support controls caption display.
+
+Seconds 74–88 now use the owner's `films/new video.mov`: seconds 6–10 show the actual incident Evidence page; seconds 22–26 show escalation/reclaim outputs; seconds 39–45 show resume/verification outputs. Stage an exact copy as `public/captures/incident-review.mov` to render. [CAPTURE_MANIFEST.json](CAPTURE_MANIFEST.json) records its hash and metadata. The October 12 incident review is retrospective and does not claim to have caused the October 10 fix; the captured incident is still Open. [Public evidence](../../evidence/README.md#actual-incident-page-and-final-tool-outputs) includes sanitized source crops and provenance.
+
+To render only the updated section:
+
+```bash
+bash scripts/render.sh LaunchFilm out/launch-v6/neatlogs-section.mp4 \
+  --preview --crf 14 --frames 4440-5279 --no-audio --concurrency 2
+```
+
+The delivered cut assembles the accepted v5 frames 0–4439, this 840-frame insert, then v5 frames 5280–7199, copying the original AAC stream intact. The video is re-encoded; outside-section picture encoding is not claimed bit-identical. Generated delivery files and original captures remain local, excluded from Git. Public video hosting is still pending.
 
 ```bash
 node_modules/.bin/tsc --noEmit

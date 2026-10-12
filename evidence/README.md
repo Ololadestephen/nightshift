@@ -66,13 +66,26 @@ The catalog treated the newly reclaimed lease as merely active and offered escal
 
 The older spans were exported after execution: their microsecond timings measure export wrapping, **not model/tool recovery latency**. The new failed-acknowledgement run wraps live model and tool execution with [the trace adapter](../src/trace.ts). The screenshots are exact crops from owner recordings, excluding browser/account areas. [Provenance and source hashes](provenance.json) distinguish captured pixels from exported records.
 
+### Actual incident page and final tool outputs
+
+On October 12, a retrospective Copilot review of these existing traces produced the neatlogs incident **Nightshift Agent Decision Error: Erroneous Escalation on Reclaimed Lease**. It is recorded as Open. The feature did not cause the earlier code change. Its source record calls the decision a discrepancy/hallucination; the implementation evidence above identifies the bounded tool-catalog sequencing defect. We do not treat an AI diagnosis as conclusive on its own.
+
+![Actual retrospective neatlogs incident evidence](screenshots/neatlogs-incident.png)
+
+The new recording also holds on the actual final tool outputs, rather than just the initial stalled observation:
+
+- [Before: successful reclaim followed by escalation](screenshots/neatlogs-before-outcome.png).
+- [After: applied resume and verified report with no mismatches](screenshots/neatlogs-after-outcome.png).
+
+These are exact captured pixels from the owner's recording, with source times/crops/hashes in [provenance.json](provenance.json). The retained two-minute film now includes this incident and outcome footage at 1:14–1:28, labelled retrospective review.
+
 ## Entire — coding context, separate from runtime checkpoints
 
 [Sanitized actual CLI output](entire/checkpoint.txt) confirms checkpoint `01M4NC4K7WZ998WC30FYRAQ1X3`, attached to [commit `7bb0de2`](https://github.com/Ololadestephen/nightshift/commit/7bb0de24bb60d6da4ef81c473901a4294dc16713).
 
 That Cursor-assisted change made the job page follow an unfinished run, save each model step and display token counts when available. Entire records the coding context associated with that change. Nightshift's SQLite checkpoints record pipeline progress; they are a different mechanism. The current CLI output has no generated Entire summary, so none is claimed. Author/session/token lines are omitted from the public excerpt; original local output is preserved with a provenance hash.
 
-Earlier Entire checkpoint `01M4KTYJRB6QACT0GFAP5DCW2E` is recorded with commit `f63e6fd`, which saved the cfo.ai assumption model. [The chronological build record](../hackathon.md) preserves the integrations' successes, missing checkpoints and fixes. This new Codex runtime change is not presented as a newly captured Entire checkpoint.
+Earlier Entire checkpoint `01M4KTYJRB6QACT0GFAP5DCW2E` is recorded with commit `f63e6fd`, which saved the cfo.ai assumption model. This new Codex runtime change is not presented as a newly captured Entire checkpoint.
 
 ## cfo.ai — actual assumption forecast and cash gap
 
@@ -98,7 +111,7 @@ Download the actual sanitized cfo.ai exports: [baseline monthly forecast](cfo/ni
 
 ## Verification and reproducibility
 
-Current verification: **41 tests passed**, TypeScript passed. [Validation record](VALIDATION.md) includes commands, scanner limitations and the published snapshot's hashes.
+Latest application verification: **46 tests passed**, TypeScript passed; [UI validation](../docs/UI_VALIDATION.md#october-12--seesaw-informed-polish) records the five added presentation-boundary checks. The earlier [runtime evidence validation](VALIDATION.md) records its then-current 41 tests, commands, scanner limitations and snapshot hashes.
 
 ```bash
 npm ci
@@ -123,8 +136,8 @@ The implementation uses SQLite transactions, unique artifact/operation keys, lea
 
 ## Public build and video status
 
-[Verified #neatHack progress post](https://x.com/Stephenololade/status/2109426447471260114) shares the observed lesson that a successful tool call is not a verified job. [Build history](https://github.com/Ololadestephen/nightshift/commits/main/) and [work log](../hackathon.md) record dated changes.
+[Verified #neatHack progress post](https://x.com/Stephenololade/status/2109426447471260114) shares the observed lesson that a successful tool call is not a verified job. [Public build history](https://github.com/Ololadestephen/nightshift/commits/main/) records dated changes.
 
-The narrated launch film is locally complete: 120 seconds, 1080p60. Its source, [script](../films/nightshift-demo/VOICEOVER_LAUNCH.md) and [validation](../films/nightshift-demo/LAUNCH_VALIDATION.md) are included. Public video upload and the official submission quote post remain pending. The film currently covers the earlier sequencing improvement; the new lost-acknowledgement evidence is this page and its live trace. No demo URL, publication or hackathon submission is invented.
+The narrated launch film is locally complete: 120 seconds, 1080p60. Its source, [script](../films/nightshift-demo/VOICEOVER_LAUNCH.md) and [validation](../films/nightshift-demo/LAUNCH_VALIDATION.md) are included. The current cut includes the retrospective incident and before/after outputs, retaining the accepted narration/music. Public video upload and the official submission quote post remain pending. The separate lost-acknowledgement runtime evidence is this page and its live trace. No demo URL or hackathon submission is invented.
 
 The app uses Node/TypeScript, SQLite, the neatlogs SDK and an OpenAI-compatible event gateway. AI assistance and reused libraries/templates are disclosed in [the film's source README](../films/nightshift-demo/README.md). A public repair service is not exposed as part of this evidence release.

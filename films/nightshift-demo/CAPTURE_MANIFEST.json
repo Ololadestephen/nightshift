@@ -28,5 +28,15 @@
     "source": "films/terminal.png",
     "asset": "entire.png",
     "sha256": "c858110e53c791c2998f5be1ee7c70f9529173de331731801cb8ad67dfce3f39"
+  },
+  {
+    "source": "films/new video.mov",
+    "asset": "incident-review.mov",
+    "sha256": "6f440def6442f988d0a9817f28af50df1fc983ccc15580a1020f1782bcb99c89",
+    "width": 3420,
+    "height": 1986,
+    "fps": 60,
+    "duration_s": 47.635,
+    "audio": false
   }
 ]

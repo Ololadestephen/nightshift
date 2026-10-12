@@ -26,7 +26,7 @@ Read the frontend-design, interface-design and better-ui guidance from the user-
 - https://www.ui-skills.com/skills/dammyjay93/interface-design
 - https://www.ui-skills.com/skills/jakubkrehel/better-ui
 
-The workbench's earlier use of interface-design and frontend-ui-engineering is recorded in hackathon.md. The current request explicitly adds a marketing surface.
+The workbench used interface-design and frontend-ui-engineering guidance. The current request explicitly adds a marketing surface.
 
 ## Visual system
 
