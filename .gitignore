@@ -18,3 +18,11 @@ data/raw/
 *.sqlite-wal
 *.log
 *.tsbuildinfo
+films/*/node_modules/
+films/*/.venv/
+films/*/out/
+films/*/public/audio/*.wav
+films/*/.remotion/
+films/*.mov
+films/*.png
+films/*/public/captures/

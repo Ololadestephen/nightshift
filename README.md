@@ -4,7 +4,9 @@
 
 ## Pitch
 
-Nightshift is an AI operations agent that investigates stalled background jobs, performs narrowly authorized repairs, resumes unfinished work and independently verifies the resulting artifact.
+Nightshift is an AI operations agent that investigates stalled background jobs, performs narrowly authorized repairs, resumes unfinished work and verifies the resulting artifact against the stored original input.
+
+**For judges:** [evidence page](evidence/README.md) — actual before/after runs, a live failed-acknowledgement recovery, Entire checkpoint, cfo.ai forecasts and reproduction/tests.
 
 ## Locked first mission
 
@@ -20,7 +22,7 @@ Live model runs stay off until `NIGHTSHIFT_SPEND_APPROVED=1`, a server-side Lite
 
 neatlogs spans wrap the live model and tool calls when `NEATLOGS_API_KEY` is present, and the local journal records each call's duration. Token usage is copied from the provider response when that response includes it. A missing or failed export leaves the job result in place and is labelled separately. A fresh invocation can resume a job already in `recovering` when this worker still holds the active lease. A tool exception or an unexpected model error escalates the job and keeps a terminal trace.
 
-While a required observation is missing, the request offers those reads. A verifying or completed job is offered only `verify_artifact`. An expired lease is offered reclaim and escalate. A reclaimed job is offered resume and escalate. An active, missing, or uncertain hold is offered only escalate. That is a bounded workflow for this pipeline. The public deployment and the video are still open. The cfo.ai workbook under `evidence/cfo/` is an assumption forecast. Entire checkpoints on `main` are listed in `hackathon.md`. Web check-in and the final Discord cutoff are still open.
+While a required observation is missing, the request offers those reads. A verifying or completed job is offered only `verify_artifact`. After an uncertain resume acknowledgement, the model reads a new checkpoint; a published checkpoint then offers verification instead of repeating the repair. An expired lease is offered reclaim and escalate. A reclaimed job is offered resume and escalate. An active, missing, or uncertain hold is offered only escalate. That is a bounded workflow for this pipeline. The narrated two-minute video is locally complete; public video upload and deployment remain open. The cfo.ai workbook under `evidence/cfo/` is an assumption forecast. Entire checkpoints are listed in `hackathon.md`. Web check-in and the final Discord cutoff are still open.
 
 ## Run the application
 
@@ -39,6 +41,8 @@ npm run typecheck
 npm run demo:recover
 npm run demo:model
 ```
+
+The CLI-only failed-action demonstration is `node --import tsx src/cli.ts demo-failure`. It deliberately loses a resume acknowledgement after artifact commit, re-inspects the checkpoint and verifies the existing report. It defaults to the deterministic controller. Add `--model` for actual model decisions under the existing application budget ledger; room for eight calls is required. Records and isolated demo state are saved under `data/local/failure-demo/`. This fault flag is not a model tool argument or a public HTTP control. See [the real recorded run and limitations](evidence/README.md#start-with-the-failed-action-run).
 
 `npm run demo:recover` seeds one labelled fault, reclaims the expired lease, resumes the unpublished steps, and checks the report. Do not set `NIGHTSHIFT_SPEND_APPROVED=1` unless you intend to use the shared model budget.
 

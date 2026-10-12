@@ -15,6 +15,7 @@ import type { ToolName } from "./policy.js";
 import { redact } from "./redact.js";
 import { canonicalJson } from "./report.js";
 import {
+  getArtifact,
   getLease,
   insertAttempt,
   insertError,
@@ -30,6 +31,7 @@ export interface ActionContext {
   clock: Clock;
   artifactDir: string;
   jobId: string;
+  controlledFault?: "resume_ack_lost";
 }
 
 export function executeTool(
@@ -158,6 +160,9 @@ function reclaim(
 }
 
 function resume(input: ActionContext, args: Record<string, unknown>): unknown {
+  const loseAcknowledgement =
+    input.controlledFault === "resume_ack_lost" &&
+    getArtifact(input.database, input.jobId) === null;
   try {
     return resumeJob(
       input.database,
@@ -167,10 +172,30 @@ function resume(input: ActionContext, args: Record<string, unknown>): unknown {
       Number(args.generation),
       input.clock,
       input.artifactDir,
-      { stopAfter: null, faultInjection: null, crashAfterArtifact: false },
+      {
+        stopAfter: null,
+        faultInjection: loseAcknowledgement ? "controlled_demo" : null,
+        crashAfterArtifact: loseAcknowledgement,
+      },
     );
   } catch (error) {
     if (isNightshiftError(error) && error.code === "injected_crash") {
+      const at = input.clock.now().toISOString();
+      insertAttempt(input.database, {
+        id: `attempt_${randomUUID()}`,
+        job_id: input.jobId,
+        kind: "resume_job",
+        outcome: "acknowledgement_lost",
+        evidence_json: canonicalJson({ operation_id: args.operation_id, code: error.code }),
+        created_at: at,
+      });
+      insertError(input.database, {
+        id: `error_${randomUUID()}`,
+        job_id: input.jobId,
+        message: "Controlled demo: resume acknowledgement lost after the artifact commit.",
+        source: "controlled_fault_injection",
+        created_at: at,
+      });
       return { type: "uncertain", code: "injected_crash" };
     }
     throw error;

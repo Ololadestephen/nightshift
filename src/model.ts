@@ -114,13 +114,18 @@ const SYSTEM_PROMPT = [
   "Resume only after reclaim succeeds, using the observed checkpoint id and the reclaimed generation.",
   "A recovering job whose reclaimed_generation is already set is ready to resume.",
   "Verify after the job is verifying, or when it is already completed.",
+  "An uncertain resume acknowledgement does not mean the repair did not execute. Inspect the latest checkpoint before another action.",
+  "When that checkpoint shows artifact_written or reconciled, verify the existing artifact instead of repeating the repair.",
   "Escalate when the lease is active, missing, or uncertain.",
   "A rejection names the rule you broke. Choose a different legal tool.",
 ].join(" ");
 
 export function toolsForTurn(memory: AgentMemory): ToolName[] {
   const status = memory.job === null ? null : memory.job.status;
-  if (status === "verifying" || status === "completed") {
+  const publishedCheckpoint =
+    status === "recovering" &&
+    (memory.checkpoint?.step === "artifact_written" || memory.checkpoint?.step === "reconciled");
+  if (status === "verifying" || status === "completed" || publishedCheckpoint) {
     return ["verify_artifact"];
   }
   const missing = missingObservations(memory);
@@ -181,5 +186,6 @@ function observation(input: DecisionInput): Record<string, unknown> {
     errors_read: input.memory.errorsRead,
     reclaimed_generation: input.memory.reclaimedGeneration,
     recent_errors: input.memory.recentErrors,
+    last_resume: input.memory.lastResume,
   };
 }

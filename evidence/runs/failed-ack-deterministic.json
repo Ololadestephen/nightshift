@@ -1,0 +1,212 @@
+{
+  "environment": "controlled_fault_injection",
+  "fault": "resume_acknowledgement_lost_after_artifact_commit",
+  "model": null,
+  "run": {
+    "decision_source": "deterministic_controller",
+    "outcome": "completed",
+    "reason": "verified",
+    "job_id": "job_f2c1e9ad-a9d7-40fb-8522-7bf633dd07c9",
+    "job_status": "completed",
+    "verification": {
+      "ok": true,
+      "code": "verified",
+      "job_status": "completed",
+      "mismatches": [],
+      "report": {
+        "job_id": "job_f2c1e9ad-a9d7-40fb-8522-7bf633dd07c9",
+        "pipeline_version": "2026-10-10.1",
+        "input_hash": "9885468a60767576c2a11b36c700f07206b0448cf3b63a54142556b35ed1e42f",
+        "row_count": 5,
+        "total_minutes": 120,
+        "by_queue": {
+          "billing": {
+            "count": 3,
+            "minutes": 95
+          },
+          "access": {
+            "count": 2,
+            "minutes": 25
+          }
+        },
+        "by_status": {
+          "closed": {
+            "count": 4,
+            "minutes": 95
+          },
+          "open": {
+            "count": 1,
+            "minutes": 25
+          }
+        }
+      }
+    },
+    "tools": [
+      "inspect_job",
+      "inspect_worker",
+      "read_checkpoint",
+      "read_recent_errors",
+      "reclaim_expired_lease",
+      "resume_job",
+      "read_checkpoint",
+      "verify_artifact"
+    ],
+    "corrections": 0,
+    "repairs": 2,
+    "model_calls": 0,
+    "trace": [
+      {
+        "name": "inspect_job",
+        "rationale": "Job status has not been observed.",
+        "output": {
+          "id": "job_f2c1e9ad-a9d7-40fb-8522-7bf633dd07c9",
+          "status": "stalled",
+          "input_hash": "9885468a60767576c2a11b36c700f07206b0448cf3b63a54142556b35ed1e42f",
+          "pipeline_version": "2026-10-10.1",
+          "observation_id": "obs_0e09543c-de57-45aa-82e1-291b6c6b6136",
+          "observed_at": "2026-10-11T23:47:07.719Z",
+          "code_version": "0.1.0"
+        },
+        "duration_ms": 0,
+        "usage": null
+      },
+      {
+        "name": "inspect_worker",
+        "rationale": "Lease ownership has not been observed.",
+        "output": {
+          "lease_state": "expired",
+          "generation": 1,
+          "holder": "nightshift-worker",
+          "expires_at": "2026-10-11T23:47:06.717Z",
+          "observation_id": "obs_a39fc380-91e9-47d3-89c7-ddca28535905",
+          "observed_at": "2026-10-11T23:47:07.719Z"
+        },
+        "duration_ms": 0,
+        "usage": null
+      },
+      {
+        "name": "read_checkpoint",
+        "rationale": "The latest checkpoint has not been observed.",
+        "output": {
+          "id": "checkpoint_34cdd9ad-99f6-4170-94d6-09bae729b6e6",
+          "step": "parsed",
+          "generation": 1,
+          "observation_id": "obs_a8a790a3-e90f-4f99-beac-510c2c30b2d5",
+          "observed_at": "2026-10-11T23:47:07.719Z"
+        },
+        "duration_ms": 0,
+        "usage": null
+      },
+      {
+        "name": "read_recent_errors",
+        "rationale": "Recent errors are untrusted evidence and are still unread.",
+        "output": {
+          "observation_id": "obs_c1b79abe-5347-4652-826b-208058932bb2",
+          "observed_at": "2026-10-11T23:47:07.719Z",
+          "errors": [
+            {
+              "id": "error_8baca616-5bee-46a4-b64d-15549cc3a7f1",
+              "source": "controlled_fault_injection",
+              "untrusted": true,
+              "message": "Worker stopped before publication in the controlled demo."
+            }
+          ]
+        },
+        "duration_ms": 0,
+        "usage": null
+      },
+      {
+        "name": "reclaim_expired_lease",
+        "rationale": "The observed lease is expired.",
+        "output": {
+          "ok": true,
+          "code": "reclaimed",
+          "generation": 2,
+          "expires_at": "2026-10-11T23:47:37.719Z",
+          "observation_id": "obs_988fcb40-165c-43a6-b610-14f5b8ac68d6"
+        },
+        "duration_ms": 0,
+        "usage": null
+      },
+      {
+        "name": "resume_job",
+        "rationale": "Resume unpublished steps from the observed checkpoint.",
+        "output": {
+          "type": "uncertain",
+          "code": "injected_crash"
+        },
+        "duration_ms": 1,
+        "usage": null
+      },
+      {
+        "name": "read_checkpoint",
+        "rationale": "The latest checkpoint has not been observed.",
+        "output": {
+          "id": "checkpoint_769049c8-99f3-4781-b9dd-97c29576a565",
+          "step": "artifact_written",
+          "generation": 2,
+          "observation_id": "obs_234c1c4f-8bc6-429a-87d8-cf1b1f7ea47e",
+          "observed_at": "2026-10-11T23:47:07.721Z"
+        },
+        "duration_ms": 0,
+        "usage": null
+      },
+      {
+        "name": "verify_artifact",
+        "rationale": "The artifact is published and must be reconciled.",
+        "output": {
+          "ok": true,
+          "code": "verified",
+          "job_status": "completed",
+          "mismatches": [],
+          "report": {
+            "job_id": "job_f2c1e9ad-a9d7-40fb-8522-7bf633dd07c9",
+            "pipeline_version": "2026-10-10.1",
+            "input_hash": "9885468a60767576c2a11b36c700f07206b0448cf3b63a54142556b35ed1e42f",
+            "row_count": 5,
+            "total_minutes": 120,
+            "by_queue": {
+              "billing": {
+                "count": 3,
+                "minutes": 95
+              },
+              "access": {
+                "count": 2,
+                "minutes": 25
+              }
+            },
+            "by_status": {
+              "closed": {
+                "count": 4,
+                "minutes": 95
+              },
+              "open": {
+                "count": 1,
+                "minutes": 25
+              }
+            }
+          }
+        },
+        "duration_ms": 0,
+        "usage": null
+      }
+    ],
+    "rejections": [],
+    "trace_id": null,
+    "neatlogs": "disabled_missing_api_key"
+  },
+  "artifact_count": 1,
+  "operations": [
+    {
+      "operation_id": "resume_e6b2c156487858907d206f2d169c4193",
+      "status": "started",
+      "observed_generation": 2
+    }
+  ],
+  "model_cost": {
+    "measured_usd": null,
+    "maximum_reserved_usd": null,
+    "source": "Deterministic controller; no model requests. USD model cost not measured."
+  },
+  "label": "Offline reproducibility check; deterministic controller, not model evidence."
+}

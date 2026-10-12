@@ -1,0 +1,20 @@
+{
+  "key": "G major",
+  "bpm": 120,
+  "chords": ["Em9", "Cmaj9", "Am11 D7sus4", "Gadd9", "-"],
+  "sections": [
+    { "bars": [1, 4], "style": "intro" },
+    { "bars": [5, 12], "style": "build" },
+    { "bars": [13, 26], "style": "build" },
+    { "bars": [27, 40], "style": "resolve" },
+    { "bars": [41, 50], "style": "hold" },
+    { "bars": [51, 51], "style": "resolve" }
+  ],
+  "signature": { "tick": "G6", "tock": "D6", "motif": [0, 7, 14], "rhythm": [0, 0.5, 1.5] },
+  "typing": "auto",
+  "motifs": [{ "at": "@lockup", "gain": 1.0 }, { "at": "@verified", "gain": 0.85 }],
+  "drops": [{ "at": "@lockup", "silence": "1/16", "suck": 0.2 }, { "at": "@verified", "silence": "1/16", "suck": 0.15 }],
+  "payoff": "@lockup",
+  "mix": { "music": 1.0, "sfx": 1.0, "reverb": 1.0, "sidechain": 0.55, "duck_db": 3 },
+  "master": { "lufs": -14, "ceiling": 0.77, "fade": 1.3 }
+}

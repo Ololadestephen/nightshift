@@ -36,6 +36,10 @@ export interface AgentMemory {
   reclaimedGeneration: number | null;
   verified: boolean;
   resumeNonce: number;
+  lastResume: {
+    type: "applied" | "replay" | "uncertain" | "rejected";
+    code: string | null;
+  } | null;
 }
 
 export function emptyMemory(): AgentMemory {
@@ -48,6 +52,7 @@ export function emptyMemory(): AgentMemory {
     reclaimedGeneration: null,
     verified: false,
     resumeNonce: 0,
+    lastResume: null,
   };
 }
 
@@ -227,6 +232,17 @@ function rememberReclaim(memory: AgentMemory, record: Record<string, unknown>): 
 }
 
 function rememberResume(memory: AgentMemory, record: Record<string, unknown>): void {
+  if (
+    record.type === "applied" ||
+    record.type === "replay" ||
+    record.type === "uncertain" ||
+    record.type === "rejected"
+  ) {
+    memory.lastResume = {
+      type: record.type,
+      code: typeof record.code === "string" ? record.code : null,
+    };
+  }
   if (record.type === "applied" || record.type === "replay") {
     if (memory.job && isJobStatus(record.status)) {
       memory.job = { ...memory.job, status: record.status };

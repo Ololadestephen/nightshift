@@ -57,6 +57,8 @@ The actual model consumes observations and selects structured tool calls. Code e
 
 Use variation in worker state, checkpoints and transient failures to evaluate whether choices respond to evidence. Don't feed the agent scenario labels that reveal the diagnosis or a fixed answer. Don't route a prewritten state-machine solution through an LLM merely to call it autonomous.
 
+The CLI-only `demo-failure` command deliberately loses a resume acknowledgement after artifact commit. It exposes the actual uncertain result in model memory, invalidates the old checkpoint observation and requires a fresh read. A published checkpoint offers artifact verification rather than another resume. The original uncertain operation remains recorded; verification reconciles the deliverable rather than inventing a successful acknowledgement. Live demonstrations reserve every call against the main app's existing budget ledger while using a separate disposable job database. Unsupported exceptions still escalate. The published trace is indexed in `evidence/README.md`.
+
 ## Observability and privacy
 
 Attach run/tool/operation/job IDs, code version and observation timestamps. Track trace export success separately from job success. Redact credentials and minimize input content before sending it to neatlogs or a model. Use non-sensitive seeded demo data and disclose it.

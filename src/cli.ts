@@ -4,6 +4,7 @@ import { DeterministicController, runAgent, type AgentRun } from "./agent.js";
 import { systemClock, type Clock } from "./clock.js";
 import { openDatabase } from "./db.js";
 import { seedScenario, type DemoScenario } from "./demo.js";
+import { failureDemo } from "./failure-demo.js";
 import { LiteLlmModel, modelConfigFromEnv } from "./model.js";
 import { DEFAULT_LIMITS } from "./policy.js";
 
@@ -103,6 +104,24 @@ async function main(): Promise<void> {
     process.exitCode = result.outcome === "completed" ? 0 : result.outcome === "blocked" ? 2 : 1;
     return;
   }
+  if (command === "demo-failure") {
+    await failureCommand();
+    return;
+  }
+  await storedCommand();
+}
+
+async function failureCommand(): Promise<void> {
+  const flag = process.argv[3];
+  if (flag !== undefined && flag !== "--model") {
+    throw new Error("Usage: demo-failure [--model]");
+  }
+  const report = await failureDemo(root, systemClock, process.env, flag === "--model");
+  print(report);
+  process.exitCode = report.run.outcome === "completed" ? 0 : 1;
+}
+
+async function storedCommand(): Promise<void> {
   mkdirSync(artifactDir, { recursive: true });
   const database = openDatabase(databasePath);
   try {
@@ -133,7 +152,7 @@ async function main(): Promise<void> {
       return;
     }
     throw new Error(
-      "Usage: serve | demo-recover | model-recover | seed <expired_lease|active_lease|completed> | recover-model <job-id>",
+      "Usage: serve | demo-recover | model-recover | demo-failure [--model] | seed <expired_lease|active_lease|completed> | recover-model <job-id>",
     );
   } finally {
     database.close();

@@ -1,0 +1,121 @@
+{
+  "environment": "controlled_fault_injection",
+  "decision_source": "model",
+  "scenario": "expired lease, saved parsed checkpoint",
+  "job_id": "job_e0dfd0b5-ffd9-4836-b9d8-6bd82569d485",
+  "outcome": "completed",
+  "recording": "Historical local journal and post-run neatlogs export; span timing is not recovery latency.",
+  "source_sha256": "d01731ad2e7db8b5aa7c62a1aa6986208c3c19a7ef57f6fee4574b845461311b",
+  "events": [
+    {
+      "name": "inspect_job",
+      "rationale": "Model selected inspect_job.",
+      "output": {
+        "id": "job_e0dfd0b5-ffd9-4836-b9d8-6bd82569d485",
+        "status": "stalled",
+        "input_hash": "9885468a60767576c2a11b36c700f07206b0448cf3b63a54142556b35ed1e42f",
+        "pipeline_version": "2026-10-10.1",
+        "observation_id": "obs_d280dc62-0141-4cc9-866d-d6fcf8fa8b16",
+        "observed_at": "2026-10-10T20:28:23.946Z",
+        "code_version": "0.1.0"
+      }
+    },
+    {
+      "name": "inspect_worker",
+      "rationale": "Model selected inspect_worker.",
+      "output": {
+        "lease_state": "expired",
+        "generation": 1,
+        "holder": "nightshift-worker",
+        "expires_at": "2026-10-10T20:28:20.064Z",
+        "observation_id": "obs_a8e9562c-c724-415d-ab2c-163710f5f485",
+        "observed_at": "2026-10-10T20:28:25.915Z"
+      }
+    },
+    {
+      "name": "read_checkpoint",
+      "rationale": "Model selected read_checkpoint.",
+      "output": {
+        "id": "checkpoint_a80ecec5-02ec-4f8c-91cb-274add2f3039",
+        "step": "parsed",
+        "generation": 1,
+        "observation_id": "obs_bb0b256b-33d7-45d3-a242-b2d82decd65b",
+        "observed_at": "2026-10-10T20:28:27.319Z"
+      }
+    },
+    {
+      "name": "read_recent_errors",
+      "rationale": "Model selected read_recent_errors.",
+      "output": {
+        "observation_id": "obs_937b27f5-fd89-47bf-a3a6-2680525e37e9",
+        "observed_at": "2026-10-10T20:28:28.380Z",
+        "errors": [
+          {
+            "id": "error_fc4bdab6-e101-4263-999a-6619290b8c16",
+            "source": "controlled_fault_injection",
+            "untrusted": true,
+            "message": "Worker stopped before publication in the controlled demo."
+          }
+        ]
+      }
+    },
+    {
+      "name": "reclaim_expired_lease",
+      "rationale": "Model selected reclaim_expired_lease.",
+      "output": {
+        "ok": true,
+        "code": "reclaimed",
+        "generation": 2,
+        "expires_at": "2026-10-10T20:28:59.454Z",
+        "observation_id": "obs_ede0f1a2-12dd-43d3-bd0f-b3e098e32e99"
+      }
+    },
+    {
+      "name": "resume_job",
+      "rationale": "Model selected resume_job.",
+      "output": {
+        "type": "applied",
+        "status": "verifying",
+        "checkpoint_id": "checkpoint_09b34e9b-fcdc-4f0f-a2bb-c0caed01f6a2",
+        "artifact_id": "artifact_4ce0b3e4-6c67-4f6b-816d-9de277c59369"
+      }
+    },
+    {
+      "name": "verify_artifact",
+      "rationale": "Model selected verify_artifact.",
+      "output": {
+        "ok": true,
+        "code": "verified",
+        "job_status": "completed",
+        "mismatches": [],
+        "report": {
+          "job_id": "job_e0dfd0b5-ffd9-4836-b9d8-6bd82569d485",
+          "pipeline_version": "2026-10-10.1",
+          "input_hash": "9885468a60767576c2a11b36c700f07206b0448cf3b63a54142556b35ed1e42f",
+          "row_count": 5,
+          "total_minutes": 120,
+          "by_queue": {
+            "billing": {
+              "count": 3,
+              "minutes": 95
+            },
+            "access": {
+              "count": 2,
+              "minutes": 25
+            }
+          },
+          "by_status": {
+            "closed": {
+              "count": 4,
+              "minutes": 95
+            },
+            "open": {
+              "count": 1,
+              "minutes": 25
+            }
+          }
+        }
+      }
+    }
+  ]
+}

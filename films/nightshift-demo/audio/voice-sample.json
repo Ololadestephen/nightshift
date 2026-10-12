@@ -1,0 +1,139 @@
+{
+  "id": "launch-opening-voice-sample",
+  "status": "generated; owner listening review pending",
+  "provider": "local Kokoro",
+  "voice": "af_heart",
+  "speed": 1.03,
+  "language": "en-us",
+  "runtime_versions": {
+    "kokoro-onnx": "0.6.1",
+    "onnxruntime": "1.31.0",
+    "espeakng-loader": "0.2.4",
+    "phonemizer": "3.4.0"
+  },
+  "model_sources": [
+    {
+      "url": "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.1/kokoro-v1.0.fp16.onnx",
+      "license": "Apache-2.0 model"
+    },
+    {
+      "url": "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.1/voices-v1.0.bin",
+      "license": "Apache-2.0 model voice pack"
+    }
+  ],
+  "runtime_license": "MIT",
+  "licensing_reference": "https://github.com/thewh1teagle/kokoro-onnx#license",
+  "generation_cost_usd": 0,
+  "cost_basis": "Free local inference; no cloud TTS or sponsor credits",
+  "picture_source": "out/launch-v4/preview.mp4",
+  "source_frames_reencoded": false,
+  "request": {
+    "provider": "kokoro",
+    "runtime": "kokoro-onnx==0.6.1",
+    "model": "Kokoro-82M v1.0",
+    "voice": "af_heart",
+    "lang": "en-us",
+    "speed": 1.03,
+    "lines": [
+      {
+        "id": "hook",
+        "start_s": 0.45,
+        "text": "When a report job stops, its completed work may still be saved. The next step depends on the evidence."
+      },
+      {
+        "id": "reveal",
+        "start_s": 8.2,
+        "text": "Meet Nightshift. An AI agent for stalled report jobs. Investigate. Repair. Verify."
+      }
+    ],
+    "bgm": {
+      "source": "public/audio/launch-bed.wav",
+      "ducking": "under narration"
+    },
+    "purpose": "Opening voice sample; full narration awaits creative review",
+    "license_sources": [
+      "https://huggingface.co/hexgrad/Kokoro-82M",
+      "https://github.com/thewh1teagle/kokoro-onnx"
+    ],
+    "cost_usd": 0,
+    "cost_basis": "Free local inference; no cloud TTS or sponsor credits used",
+    "script_note": "Reveal shortened for natural delivery within the eight-second scene; the first take is preserved separately."
+  },
+  "takes": [
+    {
+      "id": "hook",
+      "start_s": 0.45,
+      "text": "When a report job stops, its completed work may still be saved. The next step depends on the evidence.",
+      "path": "films/nightshift-demo/out/voice-sample/hook.wav",
+      "duration_s": 6.377958333333333,
+      "peak_dbfs": -7.386437985629598,
+      "phonemes": "w\u02cc\u025bn \u0250 \u0279\u1d7bp\u02c8\u0254\u02d0\u0279t d\u0292\u02c8\u0251\u02d0b st\u02c8\u0251\u02d0ps, \u026ats k\u0259mpl\u02c8i\u02d0\u027e\u1d7bd w\u02c8\u025c\u02d0k m\u02c8e\u026a st\u02c8\u026al bi\u02d0 s\u02c8e\u026avd. \u00f0\u0259 n\u02c8\u025bkst st\u02c8\u025bp d\u1d7bp\u02c8\u025bndz \u0254n\u00f0\u026a \u02c8\u025bv\u026ad\u0259ns.",
+      "generation_s": 2.39
+    },
+    {
+      "id": "reveal",
+      "start_s": 8.2,
+      "text": "Meet Nightshift. An AI agent for stalled report jobs. Investigate. Repair. Verify.",
+      "path": "films/nightshift-demo/out/voice-sample/reveal.wav",
+      "duration_s": 6.4459583333333335,
+      "peak_dbfs": -8.285058975219727,
+      "phonemes": "m\u02c8i\u02d0t n\u02c8a\u026at\u0283\u026aft. \u0250n \u02cce\u026a\u02c8a\u026a \u02c8e\u026ad\u0292\u0259nt f\u0254\u02d0\u0279 st\u02c8\u0254\u02d0ld \u0279\u1d7bp\u02c8\u0254\u02d0\u0279t d\u0292\u02c8\u0251\u02d0bz. \u026anv\u02c8\u025bst\u1d7b\u0261\u02cce\u026at. \u0279\u1d7bp\u02c8\u025b\u0279. v\u02c8\u025b\u0279\u1d7bf\u02cca\u026a."
+    }
+  ],
+  "output_probe": {
+    "programs": [],
+    "stream_groups": [],
+    "streams": [
+      {
+        "codec_name": "h264",
+        "width": 1920,
+        "height": 1080,
+        "r_frame_rate": "60/1"
+      },
+      {
+        "codec_name": "aac",
+        "sample_rate": "48000",
+        "channels": 2,
+        "r_frame_rate": "0/0"
+      }
+    ],
+    "format": {
+      "duration": "16.033333",
+      "size": "869545"
+    }
+  },
+  "audio_qa": {
+    "decoded_mix_lufs": -18.18,
+    "decoded_mix_true_peak_dbtp": -4.92,
+    "decoded_mix_lra_lu": 3.8,
+    "voice_samples_finite": true,
+    "voice_peak_dbfs": -1.9999129036648535,
+    "voice_fits_scenes": true,
+    "listening_review": "Pending owner review; no automated claim of perceptual quality"
+  },
+  "sha256": {
+    "models/kokoro-v1.0.fp16.onnx": "f3a290d384fbb27966d462905c71a46cef9e5fd00516b40df32a0b4afe77ac96",
+    "models/voices-v1.0.bin": "bca610b8308e8d99f32e6fe4197e7ec01679264efed0cac9140fe9c29f1fbf7d",
+    "hook.wav": "abc37d642a5af15d3e2d6549183b57a30e095c0f737f2f5981692b662380a57c",
+    "reveal.wav": "bd32532010273a7321cd0597f05a6aba3328f65b912bb897543bd8c7cb72b61c",
+    "voice-only.wav": "d9196a05d4a5b1b22f5e4e8a5fc298f4cad762984f5c72687d2139fd639112cf",
+    "opening-with-voice.mp4": "15fca63801a8827e14b2371abea7beca213103319e8795741f455020d9014baa"
+  },
+  "recipe": {
+    "narration_start_s": [
+      0.45,
+      8.2
+    ],
+    "voice_normalization_lufs": -17,
+    "bed_gain": 0.6,
+    "sidechain": {
+      "threshold": 0.014,
+      "ratio": 8,
+      "attack_ms": 15,
+      "release_ms": 280
+    },
+    "fade_out_start_s": 15.65,
+    "fade_out_duration_s": 0.35
+  },
+  "quality_scope": "Media generation, dependency setup and documentation only; no application/composition code modified. Desloppify execution skipped under non-code exception."
+}

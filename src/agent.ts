@@ -58,6 +58,7 @@ export interface RunAgentInput {
   limits: Limits;
   journalDir: string | null;
   env: NodeJS.ProcessEnv;
+  controlledFault?: "resume_ack_lost";
   traceOpen?: TraceOpener;
   onProgress?: (progress: RunProgress) => void;
 }

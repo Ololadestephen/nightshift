@@ -46,7 +46,8 @@ const DESCRIPTIONS: Record<ToolName, string> = {
     "Reclaim only an expired lease. observed_generation must equal the generation returned by inspect_worker.",
   resume_job:
     "Resume only after reclaim succeeds. checkpoint_id must match read_checkpoint. generation must match the reclaim result. operation_id must be 8 to 120 characters from letters, digits, colon, underscore, or hyphen.",
-  verify_artifact: "Compare the published report with the stored input after the job is verifying.",
+  verify_artifact:
+    "Compare the published report with the stored input after the job is verifying, or a fresh checkpoint shows the artifact was written following an uncertain resume acknowledgement.",
   escalate_incident:
     "Escalate when the lease is active, missing, or uncertain, or the evidence is insufficient. reason must be 3 to 80 characters from lowercase letters, digits, or underscore.",
 };

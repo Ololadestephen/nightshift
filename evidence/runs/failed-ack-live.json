@@ -1,0 +1,331 @@
+{
+  "environment": "controlled_fault_injection",
+  "fault": "resume_acknowledgement_lost_after_artifact_commit",
+  "model": "claude-sonnet-4.6",
+  "run": {
+    "decision_source": "model",
+    "outcome": "completed",
+    "reason": "verified",
+    "job_id": "job_96c4b30c-5b0a-4af7-af43-94d907a512e9",
+    "job_status": "completed",
+    "verification": {
+      "ok": true,
+      "code": "verified",
+      "job_status": "completed",
+      "mismatches": [],
+      "report": {
+        "job_id": "job_96c4b30c-5b0a-4af7-af43-94d907a512e9",
+        "pipeline_version": "2026-10-10.1",
+        "input_hash": "9885468a60767576c2a11b36c700f07206b0448cf3b63a54142556b35ed1e42f",
+        "row_count": 5,
+        "total_minutes": 120,
+        "by_queue": {
+          "billing": {
+            "count": 3,
+            "minutes": 95
+          },
+          "access": {
+            "count": 2,
+            "minutes": 25
+          }
+        },
+        "by_status": {
+          "closed": {
+            "count": 4,
+            "minutes": 95
+          },
+          "open": {
+            "count": 1,
+            "minutes": 25
+          }
+        }
+      }
+    },
+    "tools": [
+      "inspect_job",
+      "inspect_worker",
+      "read_checkpoint",
+      "read_recent_errors",
+      "reclaim_expired_lease",
+      "resume_job",
+      "read_checkpoint",
+      "verify_artifact"
+    ],
+    "corrections": 0,
+    "repairs": 2,
+    "model_calls": 8,
+    "trace": [
+      {
+        "name": "model_decision",
+        "rationale": null,
+        "output": {
+          "ok": true
+        },
+        "duration_ms": 2859,
+        "usage": {
+          "prompt_tokens": 1246,
+          "completion_tokens": 264,
+          "total_tokens": 1510
+        }
+      },
+      {
+        "name": "inspect_job",
+        "rationale": "Model selected inspect_job.",
+        "output": {
+          "id": "job_96c4b30c-5b0a-4af7-af43-94d907a512e9",
+          "status": "stalled",
+          "input_hash": "9885468a60767576c2a11b36c700f07206b0448cf3b63a54142556b35ed1e42f",
+          "pipeline_version": "2026-10-10.1",
+          "observation_id": "obs_634d50d3-84af-4731-b2cc-61a11c0494b2",
+          "observed_at": "2026-10-11T23:48:04.107Z",
+          "code_version": "0.1.0"
+        },
+        "duration_ms": 1,
+        "usage": null
+      },
+      {
+        "name": "model_decision",
+        "rationale": null,
+        "output": {
+          "ok": true
+        },
+        "duration_ms": 2028,
+        "usage": {
+          "prompt_tokens": 1175,
+          "completion_tokens": 199,
+          "total_tokens": 1374
+        }
+      },
+      {
+        "name": "inspect_worker",
+        "rationale": "Model selected inspect_worker.",
+        "output": {
+          "lease_state": "expired",
+          "generation": 1,
+          "holder": "nightshift-worker",
+          "expires_at": "2026-10-11T23:47:59.775Z",
+          "observation_id": "obs_088dda48-ad01-4e08-8b58-1b9d810231c7",
+          "observed_at": "2026-10-11T23:48:06.137Z"
+        },
+        "duration_ms": 2,
+        "usage": null
+      },
+      {
+        "name": "model_decision",
+        "rationale": null,
+        "output": {
+          "ok": true
+        },
+        "duration_ms": 1304,
+        "usage": {
+          "prompt_tokens": 1097,
+          "completion_tokens": 134,
+          "total_tokens": 1231
+        }
+      },
+      {
+        "name": "read_checkpoint",
+        "rationale": "Model selected read_checkpoint.",
+        "output": {
+          "id": "checkpoint_a3fad23f-dba9-44c1-8284-1e2f3abd3b72",
+          "step": "parsed",
+          "generation": 1,
+          "observation_id": "obs_c6a942e0-dc01-4cc0-8b53-ad8671ef71f1",
+          "observed_at": "2026-10-11T23:48:07.443Z"
+        },
+        "duration_ms": 1,
+        "usage": null
+      },
+      {
+        "name": "model_decision",
+        "rationale": null,
+        "output": {
+          "ok": true
+        },
+        "duration_ms": 1065,
+        "usage": {
+          "prompt_tokens": 1056,
+          "completion_tokens": 69,
+          "total_tokens": 1125
+        }
+      },
+      {
+        "name": "read_recent_errors",
+        "rationale": "Model selected read_recent_errors.",
+        "output": {
+          "observation_id": "obs_13996926-188c-495b-a8d0-329388703300",
+          "observed_at": "2026-10-11T23:48:08.508Z",
+          "errors": [
+            {
+              "id": "error_d2b1c73b-9036-44db-86ec-e5ac76dd63c2",
+              "source": "controlled_fault_injection",
+              "untrusted": true,
+              "message": "Worker stopped before publication in the controlled demo."
+            }
+          ]
+        },
+        "duration_ms": 1,
+        "usage": null
+      },
+      {
+        "name": "model_decision",
+        "rationale": null,
+        "output": {
+          "ok": true
+        },
+        "duration_ms": 1129,
+        "usage": {
+          "prompt_tokens": 1202,
+          "completion_tokens": 89,
+          "total_tokens": 1291
+        }
+      },
+      {
+        "name": "reclaim_expired_lease",
+        "rationale": "Model selected reclaim_expired_lease.",
+        "output": {
+          "ok": true,
+          "code": "reclaimed",
+          "generation": 2,
+          "expires_at": "2026-10-11T23:48:39.639Z",
+          "observation_id": "obs_b8285351-2c33-4422-a323-a5b1e133b530"
+        },
+        "duration_ms": 4,
+        "usage": null
+      },
+      {
+        "name": "model_decision",
+        "rationale": null,
+        "output": {
+          "ok": true
+        },
+        "duration_ms": 1628,
+        "usage": {
+          "prompt_tokens": 1260,
+          "completion_tokens": 182,
+          "total_tokens": 1442
+        }
+      },
+      {
+        "name": "resume_job",
+        "rationale": "Model selected resume_job.",
+        "output": {
+          "type": "uncertain",
+          "code": "injected_crash"
+        },
+        "duration_ms": 17,
+        "usage": null
+      },
+      {
+        "name": "model_decision",
+        "rationale": null,
+        "output": {
+          "ok": true
+        },
+        "duration_ms": 1090,
+        "usage": {
+          "prompt_tokens": 1041,
+          "completion_tokens": 67,
+          "total_tokens": 1108
+        }
+      },
+      {
+        "name": "read_checkpoint",
+        "rationale": "Model selected read_checkpoint.",
+        "output": {
+          "id": "checkpoint_2ab3db89-2817-494f-807c-a157201c56f3",
+          "step": "artifact_written",
+          "generation": 2,
+          "observation_id": "obs_28aae17e-f0b4-464f-b1d6-72a821606e38",
+          "observed_at": "2026-10-11T23:48:12.378Z"
+        },
+        "duration_ms": 1,
+        "usage": null
+      },
+      {
+        "name": "model_decision",
+        "rationale": null,
+        "output": {
+          "ok": true
+        },
+        "duration_ms": 1129,
+        "usage": {
+          "prompt_tokens": 1086,
+          "completion_tokens": 67,
+          "total_tokens": 1153
+        }
+      },
+      {
+        "name": "verify_artifact",
+        "rationale": "Model selected verify_artifact.",
+        "output": {
+          "ok": true,
+          "code": "verified",
+          "job_status": "completed",
+          "mismatches": [],
+          "report": {
+            "job_id": "job_96c4b30c-5b0a-4af7-af43-94d907a512e9",
+            "pipeline_version": "2026-10-10.1",
+            "input_hash": "9885468a60767576c2a11b36c700f07206b0448cf3b63a54142556b35ed1e42f",
+            "row_count": 5,
+            "total_minutes": 120,
+            "by_queue": {
+              "billing": {
+                "count": 3,
+                "minutes": 95
+              },
+              "access": {
+                "count": 2,
+                "minutes": 25
+              }
+            },
+            "by_status": {
+              "closed": {
+                "count": 4,
+                "minutes": 95
+              },
+              "open": {
+                "count": 1,
+                "minutes": 25
+              }
+            }
+          }
+        },
+        "duration_ms": 2,
+        "usage": null
+      }
+    ],
+    "rejections": [],
+    "trace_id": "def8e0f7b32e7ea232683ebfd9cb98b1",
+    "neatlogs": "exported"
+  },
+  "artifact_count": 1,
+  "operations": [
+    {
+      "operation_id": "resume-job_96c4b30c-5b0a-4af7-af43-94d907a512e9-gen2",
+      "status": "started",
+      "observed_generation": 2
+    }
+  ],
+  "model_cost": {
+    "measured_usd": null,
+    "maximum_reserved_usd": 0.8,
+    "source": "Owner-configured USD-per-call estimate and shared application budget ledger; not provider billing."
+  },
+  "recorded_at_utc": "2026-10-11T23:48:04.107Z",
+  "source_sha256": "225aa5ca26a2d692e0acd4378bd8f97d83d0125d9f8ea1b7cb1bac434784c0df",
+  "core_source_sha256": {
+    "src/actions.ts": "2026900ec1861d63abf4b6605f6adbd52521fc6166bd68931101ca5ae2aa766c",
+    "src/agent.ts": "424a0e395c9ae8359ffe4dcc13a7e413324257b40b32c5b6d3553a0e9fe11e19",
+    "src/controller.ts": "e99241c53c6f416374c242266ba4c2d32e8fb22b33a6563c7155d4677e1d55f4",
+    "src/model.ts": "28adcf68f81bd250017142d654f12758b0df2c4447b3b40d92c74f1159e30741",
+    "src/policy.ts": "edb07691a94555e97fce933b96e665ee025e7c46c4f70bf7ca04938d1f2acde7",
+    "src/redact.ts": "a606040aca69436b6cf024842172f7c6fa59743aa6d79bc97c300b35f6da4180"
+  },
+  "measured_usage": {
+    "prompt_tokens": 9163,
+    "completion_tokens": 1071,
+    "total_tokens": 10234
+  },
+  "recording": "Actual Sonnet run. The acknowledgement loss is intentionally induced; not a production incident. Tool timings wrap execution. Actual provider USD charge is unavailable."
+}

@@ -1,0 +1,11 @@
+● Checkpoint 01M4NC4K7WZ998WC30FYRAQ1X3
+  created  2026-10-11 11:38:59
+  commits  7bb0de2 Keep the job page current while Nightshift checks a report.
+────────────────────────────────────────────────────────────
+## Intent
+
+Open the terminal so I can check it.
+
+## Summary
+
+*Not generated yet. Run ‘entire checkpoint explain --generate 01M4NC4K7WZ998WC30FYRAQ1X3‘ to create an AI summary.*

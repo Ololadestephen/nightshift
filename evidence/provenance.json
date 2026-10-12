@@ -1,0 +1,46 @@
+{
+  "sources": [
+    {
+      "asset": "screenshots/neatlogs-before.png",
+      "source_sha256": "22b6d6a8f6c4c0ab5825441cb307a20e8ada931263495f085eeee628bcea4265",
+      "source_time_s": 3,
+      "crop": {
+        "x": 1130,
+        "y": 245,
+        "width": 1350,
+        "height": 790
+      },
+      "asset_sha256": "9131582d6cb89bbd9da249b9fd7e35f0b6943240980126da5a1f36cf6c6abe2a"
+    },
+    {
+      "asset": "screenshots/neatlogs-after.png",
+      "source_sha256": "c37009aa9cada8740edf678db7d368499c3ba87138c6d27c9c6ab5500b1422f0",
+      "source_time_s": 18,
+      "crop": {
+        "x": 1130,
+        "y": 245,
+        "width": 1350,
+        "height": 790
+      },
+      "asset_sha256": "f215036af8d5503af6531ad8216642b3f40a1b4913365ea67b9e08c73d3d649b"
+    },
+    {
+      "asset": "screenshots/cfo-model.png",
+      "source_sha256": "28987f00c4bd7407e23a6e66c5007b969f729c4508ca7c7911a0224110ffdeca",
+      "source_time_s": 5,
+      "crop": {
+        "x": 1510,
+        "y": 990,
+        "width": 1700,
+        "height": 520
+      },
+      "asset_sha256": "d3bb6b732917c7e038add3989e2fa512d432b66c8798e54426128c5923cc4f19"
+    }
+  ],
+  "privacy": "Exact pixel crops of owner recordings. Browser/account/navigation regions omitted. Both screenshots show initial observations, not final status. Full owner recordings remain local.",
+  "entire": {
+    "source_sha256": "3fe63d06b0241a0d5b77bfe20dfef7bd4ede2775240b560407684c9e462b322e",
+    "omitted": ["author", "session", "tokens"],
+    "summary_generated": false
+  }
+}
