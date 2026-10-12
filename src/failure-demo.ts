@@ -11,7 +11,6 @@ import { NightshiftError } from "./errors.js";
 import { LiteLlmModel, modelConfigFromEnv } from "./model.js";
 import { DEFAULT_LIMITS } from "./policy.js";
 import { redact } from "./redact.js";
-
 export interface FailureDemoReport {
   environment: "controlled_fault_injection";
   fault: "resume_acknowledgement_lost_after_artifact_commit";
@@ -19,14 +18,17 @@ export interface FailureDemoReport {
   local_report: string;
   run: AgentRun;
   artifact_count: number;
-  operations: { operation_id: string; status: string; observed_generation: number }[];
+  operations: {
+    operation_id: string;
+    status: string;
+    observed_generation: number;
+  }[];
   model_cost: {
     measured_usd: null;
     maximum_reserved_usd: number | null;
     source: string;
   };
 }
-
 /** A CLI-only labelled demo. Fault controls are never model tool arguments or HTTP fields. */
 export async function failureDemo(
   runtimeRoot: string,
@@ -44,7 +46,7 @@ export async function failureDemo(
     let modelName: string | null = null;
     let reservation: number | null = null;
     if (budgetDatabase) {
-      const gate = readLiveGate(env, budgetDatabase);
+      const gate = await readLiveGate(env, budgetDatabase);
       const remaining = (gate.calls_allowed ?? 0) - gate.calls_used;
       if (!gate.available || remaining < DEFAULT_LIMITS.maxModelCalls) {
         throw new NightshiftError(
@@ -63,7 +65,7 @@ export async function failureDemo(
       );
       reservation = DEFAULT_LIMITS.maxModelCalls * (gate.usd_per_call ?? 0);
     }
-    const jobId = seedScenario(database, clock, artifactDir, "expired_lease");
+    const jobId = await seedScenario(database, clock, artifactDir, "expired_lease");
     const run = await runAgent({
       database,
       clock,
@@ -75,12 +77,14 @@ export async function failureDemo(
       env: useModel ? env : {},
       controlledFault: "resume_ack_lost",
     });
-    const artifacts = database
+    const artifacts = (await database
       .prepare("SELECT COUNT(*) AS count FROM artifacts WHERE job_id = ?")
-      .get(jobId) as { count: number };
-    const operations = database
+      .get(jobId)) as {
+      count: number;
+    };
+    const operations = (await database
       .prepare("SELECT operation_id, status, observed_generation FROM operations WHERE job_id = ?")
-      .all(jobId) as FailureDemoReport["operations"];
+      .all(jobId)) as FailureDemoReport["operations"];
     const report: FailureDemoReport = {
       environment: "controlled_fault_injection",
       fault: "resume_acknowledgement_lost_after_artifact_commit",

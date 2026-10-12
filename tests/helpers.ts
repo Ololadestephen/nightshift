@@ -1,14 +1,13 @@
 import { mkdirSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { DatabaseSync } from "node:sqlite";
+import type { Database } from "../src/database-port.js";
 import { ManualClock } from "../src/clock.js";
 import { openDatabase } from "../src/db.js";
-
 export function workspace(): {
   dir: string;
   artifacts: string;
-  database: DatabaseSync;
+  database: Database;
   clock: ManualClock;
 } {
   const dir = mkdtempSync(join(tmpdir(), "nightshift-"));

@@ -8,7 +8,6 @@ import { ManualClock } from "../src/clock.js";
 import { requireJob } from "../src/store.js";
 import { openDatabase } from "../src/db.js";
 import { toolParameters } from "../src/policy.js";
-
 test("the demo command recovers one controlled expired-lease job", async () => {
   const root = mkdtempSync(join(tmpdir(), "nightshift-demo-"));
   const result = await demoRecover(root, new ManualClock(new Date("2026-10-10T12:00:00.000Z")), {});
@@ -18,7 +17,6 @@ test("the demo command recovers one controlled expired-lease job", async () => {
   assert.equal(result.neatlogs, "disabled_missing_api_key");
   assert.equal(result.verification?.report?.total_minutes, 120);
 });
-
 test("environment loading fills missing keys and a model run stays blocked without spend approval", async () => {
   const root = mkdtempSync(join(tmpdir(), "nightshift-env-"));
   const env: NodeJS.ProcessEnv = { LITELLM_API_KEY: "already-set" };
@@ -46,7 +44,7 @@ test("environment loading fills missing keys and a model run stays blocked witho
   assert.equal(blocked.tools.length, 0);
   const database = openDatabase(join(root, "nightshift.sqlite"));
   try {
-    assert.equal(requireJob(database, blocked.job_id).status, "stalled");
+    assert.equal((await requireJob(database, blocked.job_id)).status, "stalled");
   } finally {
     database.close();
   }

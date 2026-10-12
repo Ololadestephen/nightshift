@@ -7,13 +7,11 @@ import { seedScenario, type DemoScenario } from "./demo.js";
 import { failureDemo } from "./failure-demo.js";
 import { LiteLlmModel, modelConfigFromEnv } from "./model.js";
 import { DEFAULT_LIMITS } from "./policy.js";
-
 const command = process.argv[2];
 const root = join(process.cwd(), "data", "local");
 const databasePath = join(root, "nightshift.sqlite");
 const artifactDir = join(root, "artifacts");
 const journalDir = join(root, "traces");
-
 export async function demoRecover(
   runtimeRoot: string,
   clock: Clock,
@@ -24,7 +22,7 @@ export async function demoRecover(
   mkdirSync(demoArtifacts, { recursive: true });
   const database = openDatabase(join(runtimeRoot, "nightshift.sqlite"));
   try {
-    const jobId = seedScenario(database, clock, demoArtifacts, "expired_lease");
+    const jobId = await seedScenario(database, clock, demoArtifacts, "expired_lease");
     return await runAgent({
       database,
       clock,
@@ -39,7 +37,6 @@ export async function demoRecover(
     database.close();
   }
 }
-
 export function loadEnvFile(filePath: string, env: NodeJS.ProcessEnv): void {
   let text: string;
   try {
@@ -57,7 +54,6 @@ export function loadEnvFile(filePath: string, env: NodeJS.ProcessEnv): void {
     }
   }
 }
-
 export async function modelRecover(
   runtimeRoot: string,
   clock: Clock,
@@ -68,7 +64,7 @@ export async function modelRecover(
   mkdirSync(demoArtifacts, { recursive: true });
   const database = openDatabase(join(runtimeRoot, "nightshift.sqlite"));
   try {
-    const jobId = seedScenario(database, clock, demoArtifacts, "expired_lease");
+    const jobId = await seedScenario(database, clock, demoArtifacts, "expired_lease");
     return await runAgent({
       database,
       clock,
@@ -83,7 +79,6 @@ export async function modelRecover(
     database.close();
   }
 }
-
 async function main(): Promise<void> {
   loadEnvFile(join(process.cwd(), ".env"), process.env);
   if (command === "serve") {
@@ -110,7 +105,6 @@ async function main(): Promise<void> {
   }
   await storedCommand();
 }
-
 async function failureCommand(): Promise<void> {
   const flag = process.argv[3];
   if (flag !== undefined && flag !== "--model") {
@@ -120,14 +114,13 @@ async function failureCommand(): Promise<void> {
   print(report);
   process.exitCode = report.run.outcome === "completed" ? 0 : 1;
 }
-
 async function storedCommand(): Promise<void> {
   mkdirSync(artifactDir, { recursive: true });
   const database = openDatabase(databasePath);
   try {
     if (command === "seed") {
       const scenario = readScenario(process.argv[3]);
-      const jobId = seedScenario(database, systemClock, artifactDir, scenario);
+      const jobId = await seedScenario(database, systemClock, artifactDir, scenario);
       print({ scenario, job_id: jobId, environment: "controlled_fault_injection" });
       return;
     }
@@ -158,19 +151,19 @@ async function storedCommand(): Promise<void> {
     database.close();
   }
 }
-
 function readScenario(value: string | undefined): DemoScenario {
   if (value === "expired_lease" || value === "active_lease" || value === "completed") {
     return value;
   }
   throw new Error("Scenario must be expired_lease, active_lease, or completed.");
 }
-
 function print(value: unknown): void {
   process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
 }
-
-function parseAssignment(rawLine: string): { key: string; value: string } | null {
+function parseAssignment(rawLine: string): {
+  key: string;
+  value: string;
+} | null {
   const line = rawLine.trim();
   if (line.length === 0 || line.startsWith("#")) {
     return null;
@@ -185,18 +178,15 @@ function parseAssignment(rawLine: string): { key: string; value: string } | null
   }
   return { key, value: unquote(line.slice(separator + 1).trim()) };
 }
-
 function unquote(value: string): string {
   const quoted =
     (value.startsWith('"') && value.endsWith('"')) ||
     (value.startsWith("'") && value.endsWith("'"));
   return quoted ? value.slice(1, -1) : value;
 }
-
 function isMissingFile(error: unknown): boolean {
   return typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
 }
-
 const entry = process.argv[1] ?? "";
 if (entry.endsWith("cli.ts") || entry.endsWith("cli.js")) {
   main().catch((error: unknown) => {

@@ -3,8 +3,7 @@ import test from "node:test";
 import { createJob, runUntilPublished } from "../src/pipeline.js";
 import { verifyArtifact } from "../src/verifier.js";
 import { workspace } from "./helpers.js";
-
-test("verification matches an independent minute sum", () => {
+test("verification matches an independent minute sum", async () => {
   const env = workspace();
   const rows = [
     { day: "2026-10-08", queue: "billing", status: "closed", minutes: 12 },
@@ -24,10 +23,16 @@ test("verification matches an independent minute sum", () => {
     }
   }
   try {
-    const created = createJob(env.database, rows, env.clock);
+    const created = await createJob(env.database, rows, env.clock);
     assert.equal(created.generation, 1);
-    runUntilPublished(env.database, created.jobId, created.generation, env.clock, env.artifacts);
-    const result = verifyArtifact(env.database, created.jobId, env.clock, env.artifacts);
+    await runUntilPublished(
+      env.database,
+      created.jobId,
+      created.generation,
+      env.clock,
+      env.artifacts,
+    );
+    const result = await verifyArtifact(env.database, created.jobId, env.clock, env.artifacts);
     assert.equal(result.ok, true);
     assert.ok(result.report);
     assert.equal(result.report.row_count, rows.length);

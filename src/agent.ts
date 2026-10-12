@@ -1,4 +1,4 @@
-import type { DatabaseSync } from "node:sqlite";
+import type { Database } from "./database-port.js";
 import { escalate, executeTool } from "./actions.js";
 import type { Clock } from "./clock.js";
 import {
@@ -30,7 +30,6 @@ import {
   type TraceOpener,
 } from "./trace.js";
 import type { VerificationResult } from "./verifier.js";
-
 export interface AgentRun {
   decision_source: ModelClient["source"];
   outcome: "completed" | "escalated" | "blocked";
@@ -48,9 +47,8 @@ export interface AgentRun {
   trace_id: string | null;
   local_journal: string | null;
 }
-
 export interface RunAgentInput {
-  database: DatabaseSync;
+  database: Database;
   clock: Clock;
   artifactDir: string;
   jobId: string;
@@ -60,9 +58,8 @@ export interface RunAgentInput {
   env: NodeJS.ProcessEnv;
   controlledFault?: "resume_ack_lost";
   traceOpen?: TraceOpener;
-  onProgress?: (progress: RunProgress) => void;
+  onProgress?: (progress: RunProgress) => void | Promise<void>;
 }
-
 export interface RunProgress {
   decision_source: ModelClient["source"];
   model_calls: number;
@@ -72,18 +69,17 @@ export interface RunProgress {
   verification: VerificationResult | null;
   trace_id: string | null;
 }
-
 export class DeterministicController implements ModelClient {
   readonly source = "deterministic_controller" as const;
   measuredUsage = null;
-
-  decide(input: DecisionInput): Promise<unknown> {
-    return Promise.resolve(decideDeterministic(input.jobId, input.memory));
+  async decide(input: DecisionInput): Promise<unknown> {
+    return await Promise.resolve(decideDeterministic(input.jobId, input.memory));
   }
 }
-
-type RunStop = { outcome: AgentRun["outcome"]; reason: string } | null;
-
+type RunStop = {
+  outcome: AgentRun["outcome"];
+  reason: string;
+} | null;
 interface RunState {
   memory: AgentMemory;
   tools: string[];
@@ -98,26 +94,24 @@ interface RunState {
   started: number;
   perfStarted: number;
 }
-
 export async function runAgent(input: RunAgentInput): Promise<AgentRun> {
   const traced = input.traceOpen
-    ? await runWithTrace(input.env, () => executeRun(input), input.traceOpen)
-    : await runWithTrace(input.env, () => executeRun(input));
+    ? await runWithTrace(input.env, async () => await executeRun(input), input.traceOpen)
+    : await runWithTrace(input.env, async () => await executeRun(input));
   return { ...traced.result, neatlogs: traced.neatlogs };
 }
-
 async function executeRun(input: RunAgentInput): Promise<Omit<AgentRun, "neatlogs">> {
   const state = newState(input);
   try {
     while (state.steps < input.limits.maxSteps) {
       const stop = await advanceRun(input, state);
       if (stop) {
-        return materialize(input, state, stop.outcome, stop.reason);
+        return await materialize(input, state, stop.outcome, stop.reason);
       }
-      input.onProgress?.(snapshot(input, state));
+      await input.onProgress?.(snapshot(input, state));
     }
-    safeEscalate(input, "budget_steps");
-    return materialize(input, state, "escalated", "budget_steps");
+    await safeEscalate(input, "budget_steps");
+    return await materialize(input, state, "escalated", "budget_steps");
   } catch (error) {
     state.trace.push({
       name: "run",
@@ -126,11 +120,10 @@ async function executeRun(input: RunAgentInput): Promise<Omit<AgentRun, "neatlog
       duration_ms: elapsedMs(state.perfStarted),
       usage: null,
     });
-    safeEscalate(input, "run_failed");
-    return materialize(input, state, "escalated", "run_failed");
+    await safeEscalate(input, "run_failed");
+    return await materialize(input, state, "escalated", "run_failed");
   }
 }
-
 function newState(input: RunAgentInput): RunState {
   return {
     memory: emptyMemory(),
@@ -147,14 +140,13 @@ function newState(input: RunAgentInput): RunState {
     perfStarted: performance.now(),
   };
 }
-
 async function advanceRun(input: RunAgentInput, state: RunState): Promise<RunStop> {
-  const budget = budgetStop(input, state);
+  const budget = await budgetStop(input, state);
   if (budget) {
     return budget;
   }
   if (countsModelCall(input) && state.modelCalls >= input.limits.maxModelCalls) {
-    escalate(input, "budget_model");
+    await escalate(input, "budget_model");
     return { outcome: "escalated", reason: "budget_model" };
   }
   const asked = await askModel(input, state);
@@ -169,14 +161,12 @@ async function advanceRun(input: RunAgentInput, state: RunState): Promise<RunSto
   }
   return await applyDecision(input, state, asked.value);
 }
-
 function countsModelCall(input: RunAgentInput): boolean {
   return input.model.source === "model";
 }
-
-function budgetStop(input: RunAgentInput, state: RunState): RunStop {
+async function budgetStop(input: RunAgentInput, state: RunState): Promise<RunStop> {
   if (input.clock.now().getTime() - state.started > input.limits.maxElapsedMs) {
-    escalate(input, "budget_elapsed");
+    await escalate(input, "budget_elapsed");
     return { outcome: "escalated", reason: "budget_elapsed" };
   }
   if (state.memory.verified && state.memory.job?.status === "completed") {
@@ -184,12 +174,20 @@ function budgetStop(input: RunAgentInput, state: RunState): RunStop {
   }
   return null;
 }
-
 type Asked =
-  | { type: "decision"; value: unknown }
-  | { type: "blocked"; reason: string }
-  | { type: "stopped"; outcome: "escalated"; reason: string };
-
+  | {
+      type: "decision";
+      value: unknown;
+    }
+  | {
+      type: "blocked";
+      reason: string;
+    }
+  | {
+      type: "stopped";
+      outcome: "escalated";
+      reason: string;
+    };
 async function askModel(input: RunAgentInput, state: RunState): Promise<Asked> {
   const started = performance.now();
   try {
@@ -207,16 +205,18 @@ async function askModel(input: RunAgentInput, state: RunState): Promise<Asked> {
     if (blocked) {
       return { type: "blocked", reason: blocked };
     }
-    safeEscalate(input, "model_decision_failed");
+    await safeEscalate(input, "model_decision_failed");
     return { type: "stopped", outcome: "escalated", reason: "model_decision_failed" };
   }
 }
-
 function recordModel(
   input: RunAgentInput,
   state: RunState,
   started: number,
-  output: { ok: boolean; code?: string },
+  output: {
+    ok: boolean;
+    code?: string;
+  },
   usage: RunState["trace"][number]["usage"],
 ): void {
   if (input.model.source !== "model") {
@@ -230,7 +230,6 @@ function recordModel(
     usage,
   });
 }
-
 async function applyDecision(
   input: RunAgentInput,
   state: RunState,
@@ -245,22 +244,24 @@ async function applyDecision(
   }
   if (screened.type === "stop") {
     state.rejections.push(screened.detail);
-    escalate(input, screened.reason);
+    await escalate(input, screened.reason);
     return { outcome: "escalated", reason: screened.reason };
   }
   state.rejection = null;
   if (isRepair(screened.decision.tool)) {
     state.repairs += 1;
     if (state.repairs > input.limits.maxRepairs) {
-      escalate(input, "budget_repairs");
+      await escalate(input, "budget_repairs");
       return { outcome: "escalated", reason: "budget_repairs" };
     }
   }
   const started = performance.now();
   let output: unknown;
   try {
-    output = await currentTrace().tool(screened.decision.tool, screened.decision.arguments, () =>
-      executeTool(input, screened.decision, state.memory),
+    output = await currentTrace().tool(
+      screened.decision.tool,
+      screened.decision.arguments,
+      async () => await executeTool(input, screened.decision, state.memory),
     );
   } catch (error) {
     state.tools.push(screened.decision.tool);
@@ -272,7 +273,7 @@ async function applyDecision(
       usage: null,
     });
     state.steps += 1;
-    safeEscalate(input, "tool_failed");
+    await safeEscalate(input, "tool_failed");
     return { outcome: "escalated", reason: "tool_failed" };
   }
   state.tools.push(screened.decision.tool);
@@ -294,7 +295,6 @@ async function applyDecision(
   }
   return { outcome: terminal.outcome, reason: terminal.reason };
 }
-
 function snapshot(input: RunAgentInput, state: RunState): RunProgress {
   return {
     decision_source: input.model.source,
@@ -306,19 +306,18 @@ function snapshot(input: RunAgentInput, state: RunState): RunProgress {
     trace_id: currentTrace().traceId,
   };
 }
-
-function materialize(
+async function materialize(
   input: RunAgentInput,
   state: RunState,
   outcome: AgentRun["outcome"],
   reason: string,
-): Omit<AgentRun, "neatlogs"> {
+): Promise<Omit<AgentRun, "neatlogs">> {
   return {
     decision_source: input.model.source,
     outcome,
     reason,
     job_id: input.jobId,
-    job_status: jobStatus(input),
+    job_status: await jobStatus(input),
     verification: state.verification,
     tools: state.tools,
     corrections: state.corrections,
@@ -332,30 +331,29 @@ function materialize(
       : null,
   };
 }
-
-function jobStatus(input: RunAgentInput): string {
+async function jobStatus(input: RunAgentInput): Promise<string> {
   try {
-    return requireJob(input.database, input.jobId).status;
+    return (await requireJob(input.database, input.jobId)).status;
   } catch {
     return "unknown";
   }
 }
-
-function safeEscalate(input: RunAgentInput, reason: string): void {
+async function safeEscalate(input: RunAgentInput, reason: string): Promise<void> {
   try {
-    escalate(input, reason);
+    await escalate(input, reason);
   } catch {
     return undefined;
   }
 }
-
-function failureOutput(error: unknown): { ok: false; code: string } {
+function failureOutput(error: unknown): {
+  ok: false;
+  code: string;
+} {
   if (isNightshiftError(error)) {
     return { ok: false, code: error.code };
   }
   return { ok: false, code: "tool_failed" };
 }
-
 function blockedModelReason(error: unknown): string | null {
   if (!isNightshiftError(error)) {
     return null;
@@ -370,16 +368,28 @@ function blockedModelReason(error: unknown): string | null {
   }
   return null;
 }
-
 function screenDecision(
   raw: unknown,
   jobId: string,
   memory: AgentMemory,
   corrections: number,
 ):
-  | { type: "retry"; reason: string; corrections: number }
-  | { type: "stop"; reason: "invalid_model_output"; detail: string; corrections: number }
-  | { type: "run"; decision: ToolDecision; corrections: number } {
+  | {
+      type: "retry";
+      reason: string;
+      corrections: number;
+    }
+  | {
+      type: "stop";
+      reason: "invalid_model_output";
+      detail: string;
+      corrections: number;
+    }
+  | {
+      type: "run";
+      decision: ToolDecision;
+      corrections: number;
+    } {
   const parsed = parseDecision(raw);
   if (!parsed.ok) {
     const next = corrections + 1;
@@ -418,13 +428,11 @@ function screenDecision(
   }
   return { type: "run", decision: parsed.decision, corrections };
 }
-
 type Terminal = {
   outcome: "completed" | "escalated";
   reason: string;
   verification: VerificationResult | null;
 };
-
 function terminalOutcome(tool: ToolName, output: unknown): Terminal | null {
   if (tool === "verify_artifact") {
     const verification = output as VerificationResult;
@@ -438,7 +446,13 @@ function terminalOutcome(tool: ToolName, output: unknown): Terminal | null {
   if (tool === "escalate_incident") {
     return {
       outcome: "escalated",
-      reason: String((output as { reason: string }).reason),
+      reason: String(
+        (
+          output as {
+            reason: string;
+          }
+        ).reason,
+      ),
       verification: null,
     };
   }

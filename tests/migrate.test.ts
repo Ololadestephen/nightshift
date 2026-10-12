@@ -6,8 +6,7 @@ import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 import { openDatabase } from "../src/db.js";
 import { getJob } from "../src/store.js";
-
-test("a version 1 database keeps its job and gains ownership columns", () => {
+test("a version 1 database keeps its job and gains ownership columns", async () => {
   const path = join(mkdtempSync(join(tmpdir(), "nightshift-migrate-")), "nightshift.sqlite");
   const created = new DatabaseSync(path);
   created.exec(`
@@ -38,11 +37,13 @@ test("a version 1 database keeps its job and gains ownership columns", () => {
   created.close();
   const database = openDatabase(path);
   try {
-    const version = database.prepare("SELECT version FROM schema_meta WHERE id = 1").get() as {
+    const version = (await database
+      .prepare("SELECT version FROM schema_meta WHERE id = 1")
+      .get()) as {
       version: number;
     };
     assert.equal(version.version, 2);
-    const job = getJob(database, "job_legacy");
+    const job = await getJob(database, "job_legacy");
     assert.ok(job);
     assert.equal(job.owner_session_id, null);
     assert.equal(job.auto_finish, 1);
@@ -51,7 +52,6 @@ test("a version 1 database keeps its job and gains ownership columns", () => {
     database.close();
   }
 });
-
 test("an unknown schema version fails closed", () => {
   const path = join(mkdtempSync(join(tmpdir(), "nightshift-migrate-")), "nightshift.sqlite");
   const created = new DatabaseSync(path);

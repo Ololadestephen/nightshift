@@ -5,14 +5,12 @@ import { join } from "node:path";
 import test from "node:test";
 import { startApp } from "../src/app/server.js";
 import type { DecisionInput, ModelClient } from "../src/controller.js";
-
 const ROWS = {
   rows: [
     { day: "2026-10-08", queue: "billing", status: "closed", minutes: 12 },
     { day: "2026-10-09", queue: "access", status: "open", minutes: 7 },
   ],
 };
-
 test("submission validates input, writes the report, and keeps sessions apart", async () => {
   await withApp({}, undefined, async (base) => {
     const page = await fetch(`${base}/`);
@@ -67,7 +65,9 @@ test("submission validates input, writes the report, and keeps sessions apart", 
     const detail = await waitJob(base, opened.cookie, jobId, "verifying");
     const job = record(detail.job);
     assert.equal(job.row_count, 2);
-    const steps = detail.checkpoints as { step: string }[];
+    const steps = detail.checkpoints as {
+      step: string;
+    }[];
     assert.ok(steps.some((item) => item.step === "artifact_written"));
     const report = record(detail.report);
     assert.equal(report.verified, false);
@@ -100,7 +100,6 @@ test("submission validates input, writes the report, and keeps sessions apart", 
     assert.equal(lab.status, 404);
   });
 });
-
 test("an injected model verifies once and a repeat start does not spend again", async () => {
   const calls = { n: 0 };
   await withApp(liveEnv(), verifyingModel(calls), async (base) => {
@@ -123,11 +122,18 @@ test("an injected model verifies once and a repeat start does not spend again", 
     assert.equal(usage.prompt_tokens, 6);
     assert.equal(usage.completion_tokens, null);
     assert.equal(run.neatlogs, "disabled_missing_api_key");
-    const names = (run.trace as { name: string; duration_ms: number }[]).map((event) => event.name);
+    const names = (
+      run.trace as {
+        name: string;
+        duration_ms: number;
+      }[]
+    ).map((event) => event.name);
     assert.ok(names.includes("model_decision"));
     assert.ok(names.includes("inspect_job"));
     assert.ok(names.includes("verify_artifact"));
-    for (const event of run.trace as { duration_ms: number }[]) {
+    for (const event of run.trace as {
+      duration_ms: number;
+    }[]) {
       assert.equal(typeof event.duration_ms, "number");
     }
     const repeat = await call(base, `/api/jobs/${jobId}/runs`, opened.cookie, {
@@ -140,7 +146,6 @@ test("an injected model verifies once and a repeat start does not spend again", 
     assert.equal(calls.n, 2);
   });
 });
-
 test("a second click during a run and a second job share one model call", async () => {
   let release = (): void => undefined;
   const hold = new Promise<void>((resolve) => {
@@ -197,7 +202,6 @@ test("a second click during a run and a second job share one model call", async 
     await app.close();
   }
 });
-
 test("restart keeps the finished job and does not open another run", async () => {
   const calls = { n: 0 };
   const root = mkdtempSync(join(tmpdir(), "nightshift-http-"));
@@ -234,7 +238,6 @@ test("restart keeps the finished job and does not open another run", async () =>
     await second.close();
   }
 });
-
 test("budget, invalid model output, invite, size, and labelled faults stay explicit", async () => {
   const calls = { n: 0 };
   await withApp(liveEnv("2", "1"), verifyingModel(calls), async (base) => {
@@ -257,15 +260,14 @@ test("budget, invalid model output, invite, size, and labelled faults stay expli
     assert.equal(record(record(after.body).job).status, "verifying");
     assert.equal(calls.n, 2);
   });
-
   const invalidCalls = { n: 0 };
   const invalid: ModelClient = {
     source: "model",
     measuredUsage: null,
-    decide(): Promise<unknown> {
+    async decide(): Promise<unknown> {
       invalidCalls.n += 1;
       this.measuredUsage = null;
-      return Promise.resolve({ tool: "not-a-tool", rationale: "no", arguments: {} });
+      return await Promise.resolve({ tool: "not-a-tool", rationale: "no", arguments: {} });
     },
   };
   await withApp(liveEnv("4", "1"), invalid, async (base) => {
@@ -281,7 +283,6 @@ test("budget, invalid model output, invite, size, and labelled faults stay expli
     assert.equal(record(stopped.job).escalation_reason, "invalid_model_output");
     assert.equal(invalidCalls.n, 2);
   });
-
   await withApp({ NIGHTSHIFT_INVITE_CODE: "desk-code" }, undefined, async (base) => {
     const missing = await session(base);
     assert.equal(missing.status, 401);
@@ -290,18 +291,16 @@ test("budget, invalid model output, invite, size, and labelled faults stay expli
     assert.equal(opened.status, 201);
     assert.match(opened.cookie, /^ns_session=/);
   });
-
   await withApp({}, undefined, async (base) => {
     const opened = await session(base);
     const oversized = await fetch(`${base}/api/jobs`, {
       method: "POST",
       headers: { "content-type": "application/json", cookie: opened.cookie },
-      body: JSON.stringify({ note: "x".repeat(70_000) }),
+      body: JSON.stringify({ note: "x".repeat(70000) }),
       signal: AbortSignal.timeout(3000),
     });
     assert.equal(oversized.status, 413);
   });
-
   const throwing: ModelClient = {
     source: "model",
     measuredUsage: null,
@@ -322,7 +321,6 @@ test("budget, invalid model output, invite, size, and labelled faults stay expli
     },
     false,
   );
-
   await withApp(
     {},
     undefined,
@@ -366,7 +364,6 @@ test("budget, invalid model output, invite, size, and labelled faults stay expli
     true,
   );
 });
-
 test("new sessions stop after the hourly cap", async () => {
   await withApp({}, undefined, async (base) => {
     for (let index = 0; index < 30; index += 1) {
@@ -378,7 +375,6 @@ test("new sessions stop after the hourly cap", async () => {
     assert.equal(record(blocked.body).error, "session_limit");
   });
 });
-
 function liveEnv(cap = "4", perCall = "1"): NodeJS.ProcessEnv {
   return {
     LITELLM_API_KEY: "test-key-not-sent",
@@ -387,7 +383,6 @@ function liveEnv(cap = "4", perCall = "1"): NodeJS.ProcessEnv {
     NIGHTSHIFT_USD_PER_CALL: perCall,
   };
 }
-
 function verifyingModel(calls: { n: number }): ModelClient {
   return {
     source: "model",
@@ -399,7 +394,6 @@ function verifyingModel(calls: { n: number }): ModelClient {
     },
   };
 }
-
 function decisionFor(input: DecisionInput): unknown {
   const status = input.memory.job?.status;
   if (status === "verifying" || status === "completed") {
@@ -415,15 +409,17 @@ function decisionFor(input: DecisionInput): unknown {
     rationale: "Read whether the report is already written.",
   };
 }
-
-function independentMinutes(rows: { minutes: number }[]): number {
+function independentMinutes(
+  rows: {
+    minutes: number;
+  }[],
+): number {
   let total = 0;
   for (const row of rows) {
     total += row.minutes;
   }
   return total;
 }
-
 async function withApp(
   env: NodeJS.ProcessEnv,
   model: ModelClient | undefined,
@@ -444,19 +440,16 @@ async function withApp(
     await app.close();
   }
 }
-
 interface SessionResponse {
   status: number;
   cookie: string;
   body: unknown;
 }
-
 interface ApiResponse {
   status: number;
   body: unknown;
   headers: Headers;
 }
-
 async function session(base: string, invite?: string): Promise<SessionResponse> {
   const response = await fetch(`${base}/api/session`, {
     method: "POST",
@@ -467,12 +460,14 @@ async function session(base: string, invite?: string): Promise<SessionResponse> 
   const match = /ns_session=[^;]+/.exec(response.headers.get("set-cookie") ?? "");
   return { status: response.status, cookie: match?.[0] ?? "", body };
 }
-
 async function call(
   base: string,
   path: string,
   cookie: string,
-  init?: { method?: string; body?: string },
+  init?: {
+    method?: string;
+    body?: string;
+  },
 ): Promise<ApiResponse> {
   const request: RequestInit = {
     method: init?.method ?? "GET",
@@ -489,7 +484,6 @@ async function call(
     body: text ? (JSON.parse(text) as unknown) : null,
   };
 }
-
 async function createJob(base: string, cookie: string, payload: unknown): Promise<string> {
   const response = await call(base, "/api/jobs", cookie, {
     method: "POST",
@@ -498,7 +492,6 @@ async function createJob(base: string, cookie: string, payload: unknown): Promis
   assert.equal(response.status, 202, JSON.stringify(response.body));
   return String(record(response.body).job_id);
 }
-
 async function waitJob(
   base: string,
   cookie: string,
@@ -522,7 +515,6 @@ async function waitJob(
     `job stayed ${last}, expected ${status}: ${JSON.stringify(lastBody.job)} ${JSON.stringify(lastBody.run)}`,
   );
 }
-
 async function waitUntil(ready: () => boolean): Promise<void> {
   for (let attempt = 0; attempt < 50; attempt += 1) {
     if (ready()) {
@@ -532,12 +524,10 @@ async function waitUntil(ready: () => boolean): Promise<void> {
   }
   throw new Error("condition was not reached");
 }
-
 function record(value: unknown): Record<string, unknown> {
   assert.ok(value && typeof value === "object" && !Array.isArray(value));
   return value as Record<string, unknown>;
 }
-
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);

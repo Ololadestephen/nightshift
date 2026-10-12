@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { DatabaseSync } from "node:sqlite";
+import type { Database } from "./database-port.js";
 import type { Clock } from "./clock.js";
 import { CODE_VERSION } from "./constants.js";
 import { transaction } from "./db.js";
@@ -24,7 +24,6 @@ import {
   requireJob,
   transitionJob,
 } from "./store.js";
-
 export interface VerificationResult {
   ok: boolean;
   code: string;
@@ -32,23 +31,22 @@ export interface VerificationResult {
   mismatches: string[];
   report: ReportBody | null;
 }
-
-export function verifyArtifact(
-  database: DatabaseSync,
+export async function verifyArtifact(
+  database: Database,
   jobId: string,
   clock: Clock,
   artifactDir: string,
-): VerificationResult {
+): Promise<VerificationResult> {
   const now = clock.now().toISOString();
-  return transaction(database, () => {
-    const job = requireJob(database, jobId);
+  return await transaction(database, async (boundDatabase) => {
+    const job = await requireJob(boundDatabase, jobId);
     const mismatches: string[] = [];
     const rows = validateRows(parseStoredJson(job.input_json));
     const expected = aggregate(rows, job.id, job.pipeline_version);
     if (hashRows(rows) !== job.input_hash) {
       mismatches.push("input_hash");
     }
-    const artifact = getArtifact(database, jobId);
+    const artifact = await getArtifact(boundDatabase, jobId);
     let actual: ReportBody | null = null;
     if (!artifact) {
       mismatches.push("artifact_missing");
@@ -74,36 +72,37 @@ export function verifyArtifact(
       if (sha256(artifact.body_json) !== artifact.content_hash) {
         mismatches.push("content_hash");
       }
-      const filePath = join(artifactDir, `${jobId}.json`);
-      let fileText: string | null = null;
-      try {
-        fileText = readFileSync(filePath, "utf8");
-      } catch {
-        fileText = null;
-      }
-      if (fileText === null) {
-        mismatches.push("artifact_file_missing");
-      } else if (fileText !== artifact.body_json) {
-        mismatches.push("artifact_file_mismatch");
+      if (boundDatabase.artifactStorage === "file") {
+        const filePath = join(artifactDir, `${jobId}.json`);
+        let fileText: string | null = null;
+        try {
+          fileText = readFileSync(filePath, "utf8");
+        } catch {
+          fileText = null;
+        }
+        if (fileText === null) {
+          mismatches.push("artifact_file_missing");
+        } else if (fileText !== artifact.body_json) {
+          mismatches.push("artifact_file_mismatch");
+        }
       }
     }
-
     const ok = mismatches.length === 0;
     if (ok && job.status === "verifying") {
-      transitionJob(database, jobId, "completed", now, null);
-      insertCheckpoint(database, {
+      await transitionJob(boundDatabase, jobId, "completed", now, null);
+      await insertCheckpoint(boundDatabase, {
         id: `checkpoint_${randomUUID()}`,
         job_id: jobId,
         step: "reconciled",
-        generation: getLease(database, jobId)?.generation ?? 0,
+        generation: (await getLease(boundDatabase, jobId))?.generation ?? 0,
         payload_json: canonicalJson({ step: "reconciled", input_hash: job.input_hash }),
         created_at: now,
       });
     } else if (!ok && job.status !== "completed" && job.status !== "escalated") {
-      transitionJob(database, jobId, "escalated", now, "verification_failed");
+      await transitionJob(boundDatabase, jobId, "escalated", now, "verification_failed");
     }
-    const status = requireJob(database, jobId).status;
-    insertAttempt(database, {
+    const status = (await requireJob(boundDatabase, jobId)).status;
+    await insertAttempt(boundDatabase, {
       id: `attempt_${randomUUID()}`,
       job_id: jobId,
       kind: "verify_artifact",
@@ -112,7 +111,7 @@ export function verifyArtifact(
       created_at: now,
     });
     if (!ok) {
-      insertError(database, {
+      await insertError(boundDatabase, {
         id: `error_${randomUUID()}`,
         job_id: jobId,
         message: `Verification failed: ${mismatches.join(", ")}`,

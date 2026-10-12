@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { renameSync, rmSync } from "node:fs";
-import type { DatabaseSync } from "node:sqlite";
+import type { Database } from "./database-port.js";
 import type { Clock } from "./clock.js";
 import {
   LEASE_HOLDER,
@@ -39,39 +39,36 @@ import {
   transitionJob,
   type CheckpointRecord,
 } from "./store.js";
-
 export interface StepOptions {
   stopAfter: CheckpointStep | null;
   faultInjection: "controlled_demo" | null;
   crashAfterArtifact: boolean;
 }
-
 export interface ResumeResultApplied {
   type: "applied" | "replay";
   status: string;
   checkpoint_id: string | null;
   artifact_id: string | null;
 }
-
 export interface ResumeResultOther {
   type: "uncertain" | "rejected";
   code: string;
 }
-
 export type ResumeResult = ResumeResultApplied | ResumeResultOther;
-
 const EMPTY_OPTIONS: StepOptions = {
   stopAfter: null,
   faultInjection: null,
   crashAfterArtifact: false,
 };
-
-export function createJob(
-  database: DatabaseSync,
+export async function createJob(
+  database: Database,
   rows: unknown,
   clock: Clock,
   ownerSessionId: string | null = null,
-): { jobId: string; generation: number } {
+): Promise<{
+  jobId: string;
+  generation: number;
+}> {
   const now = clock.now().toISOString();
   const jobId = `job_${randomUUID()}`;
   let validated: ReturnType<typeof validateRows>;
@@ -79,8 +76,8 @@ export function createJob(
     validated = validateRows(rows);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Invalid dataset.";
-    transaction(database, () => {
-      insertJob(database, {
+    await transaction(database, async (boundDatabase) => {
+      await insertJob(boundDatabase, {
         id: jobId,
         status: "queued",
         input_hash: "",
@@ -93,8 +90,8 @@ export function createJob(
         created_at: now,
         updated_at: now,
       });
-      transitionJob(database, jobId, "escalated", now, "invalid_input");
-      insertError(database, {
+      await transitionJob(boundDatabase, jobId, "escalated", now, "invalid_input");
+      await insertError(boundDatabase, {
         id: `error_${randomUUID()}`,
         job_id: jobId,
         message,
@@ -104,10 +101,9 @@ export function createJob(
     });
     return { jobId, generation: 0 };
   }
-
   const inputHash = hashRows(validated);
-  transaction(database, () => {
-    insertJob(database, {
+  await transaction(database, async (boundDatabase) => {
+    await insertJob(boundDatabase, {
       id: jobId,
       status: "queued",
       input_hash: inputHash,
@@ -120,8 +116,8 @@ export function createJob(
       created_at: now,
       updated_at: now,
     });
-    transitionJob(database, jobId, "running", now, null);
-    insertLease(database, {
+    await transitionJob(boundDatabase, jobId, "running", now, null);
+    await insertLease(boundDatabase, {
       job_id: jobId,
       generation: 1,
       holder: LEASE_HOLDER,
@@ -130,26 +126,29 @@ export function createJob(
   });
   return { jobId, generation: 1 };
 }
-
-export function advanceJob(
-  database: DatabaseSync,
+export async function advanceJob(
+  database: Database,
   jobId: string,
   generation: number,
   clock: Clock,
   artifactDir: string,
   options: StepOptions = EMPTY_OPTIONS,
-): WorkerStep | "stopped" | "already_published" {
-  const latest = latestCheckpoint(database, jobId);
+): Promise<WorkerStep | "stopped" | "already_published"> {
+  const latest = await latestCheckpoint(database, jobId);
   if (latest?.step === "artifact_written" || latest?.step === "reconciled") {
-    publishFile(database, jobId, artifactDir);
+    await publishFile(database, jobId, artifactDir);
     return "already_published";
   }
   const step = nextWorkerStep(latest?.step ?? null);
   const now = clock.now();
-  const payload = computePayload(database, jobId, step);
-  let artifactFile: { tempPath: string; finalPath: string; body: string } | null = null;
-  if (step === "artifact_written") {
-    artifactFile = prepareArtifactFile(
+  const payload = await computePayload(database, jobId, step);
+  let artifactFile: {
+    tempPath: string;
+    finalPath: string;
+    body: string;
+  } | null = null;
+  if (step === "artifact_written" && database.artifactStorage === "file") {
+    artifactFile = await prepareArtifactFile(
       database,
       jobId,
       artifactDir,
@@ -159,19 +158,19 @@ export function advanceJob(
     );
   }
   try {
-    transaction(database, () => {
-      assertFence(database, jobId, generation, now);
-      if (step === "artifact_written" && artifactFile) {
-        storeArtifact(
-          database,
+    await transaction(database, async (boundDatabase) => {
+      await assertFence(boundDatabase, jobId, generation, clock.now());
+      if (step === "artifact_written") {
+        await storeArtifact(
+          boundDatabase,
           jobId,
-          artifactFile.finalPath,
+          artifactFile?.finalPath ?? null,
           payload.body,
           payload.contentHash,
           now,
         );
       }
-      insertCheckpoint(database, {
+      await insertCheckpoint(boundDatabase, {
         id: `checkpoint_${randomUUID()}`,
         job_id: jobId,
         step,
@@ -180,7 +179,7 @@ export function advanceJob(
         created_at: now.toISOString(),
       });
       if (step === "artifact_written") {
-        transitionJob(database, jobId, "verifying", now.toISOString(), null);
+        await transitionJob(boundDatabase, jobId, "verifying", now.toISOString(), null);
       }
       if (options.stopAfter === step) {
         if (options.faultInjection !== "controlled_demo") {
@@ -189,7 +188,7 @@ export function advanceJob(
             "Fault injection is limited to the controlled demo.",
           );
         }
-        stall(database, jobId, now);
+        await stall(boundDatabase, jobId, now);
       }
     });
   } catch (error) {
@@ -206,9 +205,8 @@ export function advanceJob(
   }
   return step;
 }
-
-export function resumeJob(
-  database: DatabaseSync,
+export async function resumeJob(
+  database: Database,
   jobId: string,
   checkpointId: string,
   operationId: string,
@@ -216,8 +214,8 @@ export function resumeJob(
   clock: Clock,
   artifactDir: string,
   options: StepOptions = EMPTY_OPTIONS,
-): ResumeResult {
-  const existing = getOperation(database, operationId);
+): Promise<ResumeResult> {
+  const existing = await getOperation(database, operationId);
   if (existing) {
     if (existing.job_id !== jobId) {
       return { type: "rejected", code: "operation_job_mismatch" };
@@ -231,10 +229,9 @@ export function resumeJob(
     }
     return { type: "rejected", code: "operation_closed" };
   }
-
   const startedAt = clock.now().toISOString();
-  transaction(database, () => {
-    insertOperation(database, {
+  await transaction(database, async (boundDatabase) => {
+    await insertOperation(boundDatabase, {
       operation_id: operationId,
       job_id: jobId,
       action: "resume_job",
@@ -245,23 +242,22 @@ export function resumeJob(
       updated_at: startedAt,
     });
   });
-
   try {
-    const latest = latestCheckpoint(database, jobId);
+    const latest = await latestCheckpoint(database, jobId);
     if (!latest || latest.id !== checkpointId) {
       const rejected = { type: "rejected" as const, code: "checkpoint_mismatch" };
-      finishQuietly(database, operationId, "failed", rejected, clock.now().toISOString());
+      await finishQuietly(database, operationId, "failed", rejected, clock.now().toISOString());
       return rejected;
     }
     let guard = 0;
     while (guard < WORKER_STEPS.length) {
       guard += 1;
-      const current = latestCheckpoint(database, jobId);
+      const current = await latestCheckpoint(database, jobId);
       if (current?.step === "artifact_written" || current?.step === "reconciled") {
-        publishFile(database, jobId, artifactDir);
+        await publishFile(database, jobId, artifactDir);
         break;
       }
-      const step = advanceJob(database, jobId, generation, clock, artifactDir, {
+      const step = await advanceJob(database, jobId, generation, clock, artifactDir, {
         stopAfter: options.stopAfter,
         faultInjection: options.faultInjection,
         crashAfterArtifact: false,
@@ -282,16 +278,16 @@ export function resumeJob(
         "Controlled fault after the artifact commit and before acknowledgement.",
       );
     }
-    const job = requireJob(database, jobId);
-    const checkpoint = latestCheckpoint(database, jobId);
+    const job = await requireJob(database, jobId);
+    const checkpoint = await latestCheckpoint(database, jobId);
     const applied: ResumeResultApplied = {
       type: "applied",
       status: job.status,
       checkpoint_id: checkpoint?.id ?? null,
       artifact_id: job.artifact_id,
     };
-    finishQuietly(database, operationId, "succeeded", applied, clock.now().toISOString());
-    recordResume(database, jobId, "applied", clock.now().toISOString(), {
+    await finishQuietly(database, operationId, "succeeded", applied, clock.now().toISOString());
+    await recordResume(database, jobId, "applied", clock.now().toISOString(), {
       operation_id: operationId,
     });
     return applied;
@@ -303,29 +299,27 @@ export function resumeJob(
       type: "rejected" as const,
       code: isNightshiftError(error) ? error.code : "resume_failed",
     };
-    finishQuietly(database, operationId, "failed", failure, clock.now().toISOString());
+    await finishQuietly(database, operationId, "failed", failure, clock.now().toISOString());
     throw error;
   }
 }
-
-export function runUntilPublished(
-  database: DatabaseSync,
+export async function runUntilPublished(
+  database: Database,
   jobId: string,
   generation: number,
   clock: Clock,
   artifactDir: string,
-): void {
+): Promise<void> {
   let guard = 0;
   while (guard < WORKER_STEPS.length) {
     guard += 1;
-    const latest = latestCheckpoint(database, jobId);
+    const latest = await latestCheckpoint(database, jobId);
     if (latest?.step === "artifact_written" || latest?.step === "reconciled") {
       return;
     }
-    advanceJob(database, jobId, generation, clock, artifactDir);
+    await advanceJob(database, jobId, generation, clock, artifactDir);
   }
 }
-
 function nextWorkerStep(current: CheckpointStep | null): WorkerStep {
   if (!current || current === "reconciled") {
     return "input_accepted";
@@ -340,13 +334,16 @@ function nextWorkerStep(current: CheckpointStep | null): WorkerStep {
   }
   return next;
 }
-
-function computePayload(
-  database: DatabaseSync,
+async function computePayload(
+  database: Database,
   jobId: string,
   step: CheckpointStep,
-): { checkpoint: Record<string, unknown>; body: string; contentHash: string } {
-  const job = requireJob(database, jobId);
+): Promise<{
+  checkpoint: Record<string, unknown>;
+  body: string;
+  contentHash: string;
+}> {
+  const job = await requireJob(database, jobId);
   const rows = validateRows(parseStoredJson(job.input_json));
   const inputHash = hashRows(rows);
   if (inputHash !== job.input_hash) {
@@ -368,9 +365,13 @@ function computePayload(
     contentHash: sha256(body),
   };
 }
-
-function assertFence(database: DatabaseSync, jobId: string, generation: number, now: Date): void {
-  const lease = getLease(database, jobId);
+async function assertFence(
+  database: Database,
+  jobId: string,
+  generation: number,
+  now: Date,
+): Promise<void> {
+  const lease = await getLease(database, jobId);
   const observed = observeLease(lease, now);
   if (observed.lease_state === "missing") {
     throw new NightshiftError("lease_missing", "No lease is recorded for this job.");
@@ -388,20 +389,19 @@ function assertFence(database: DatabaseSync, jobId: string, generation: number, 
     );
   }
 }
-
-function stall(database: DatabaseSync, jobId: string, now: Date): void {
+async function stall(database: Database, jobId: string, now: Date): Promise<void> {
   const at = now.toISOString();
-  transitionJob(database, jobId, "stalled", at, null);
+  await transitionJob(database, jobId, "stalled", at, null);
   const expiredAt = new Date(now.getTime() - STALL_BACKDATE_MS).toISOString();
-  expireLease(database, jobId, expiredAt);
-  insertError(database, {
+  await expireLease(database, jobId, expiredAt);
+  await insertError(database, {
     id: `error_${randomUUID()}`,
     job_id: jobId,
     message: "Worker stopped before publication in the controlled demo.",
     source: "controlled_fault_injection",
     created_at: at,
   });
-  insertAttempt(database, {
+  await insertAttempt(database, {
     id: `attempt_${randomUUID()}`,
     job_id: jobId,
     kind: "fault_injection",
@@ -410,27 +410,25 @@ function stall(database: DatabaseSync, jobId: string, now: Date): void {
     created_at: at,
   });
 }
-
-function finishQuietly(
-  database: DatabaseSync,
+async function finishQuietly(
+  database: Database,
   operationId: string,
   status: "succeeded" | "failed",
   result: unknown,
   at: string,
-): void {
-  transaction(database, () => {
-    finishOperation(database, operationId, status, canonicalJson(result), at);
+): Promise<void> {
+  await transaction(database, async (boundDatabase) => {
+    await finishOperation(boundDatabase, operationId, status, canonicalJson(result), at);
   });
 }
-
-function recordResume(
-  database: DatabaseSync,
+async function recordResume(
+  database: Database,
   jobId: string,
   outcome: string,
   at: string,
   evidence: Record<string, unknown>,
-): void {
-  insertAttempt(database, {
+): Promise<void> {
+  await insertAttempt(database, {
     id: `attempt_${randomUUID()}`,
     job_id: jobId,
     kind: "resume_job",
@@ -439,7 +437,9 @@ function recordResume(
     created_at: at,
   });
 }
-
-export function latestStep(database: DatabaseSync, jobId: string): CheckpointRecord | null {
-  return latestCheckpoint(database, jobId);
+export async function latestStep(
+  database: Database,
+  jobId: string,
+): Promise<CheckpointRecord | null> {
+  return await latestCheckpoint(database, jobId);
 }

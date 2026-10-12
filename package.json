@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=22"
+    "node": "24.x"
   },
   "scripts": {
     "serve": "tsx src/cli.ts serve",
@@ -16,6 +16,8 @@
     "format:check": "prettier --check ."
   },
   "dependencies": {
+    "@libsql/client": "^0.18.0",
+    "@vercel/functions": "^3.9.11",
     "neatlogs": "^1.1.28",
     "openai": "^6.34.0"
   },

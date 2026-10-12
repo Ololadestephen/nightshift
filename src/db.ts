@@ -1,8 +1,9 @@
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { LocalDatabase, type Database } from "./database-port.js";
 
-const SCHEMA = `
+export const SCHEMA = `
 CREATE TABLE IF NOT EXISTS schema_meta (
   id INTEGER PRIMARY KEY CHECK (id = 1),
   version INTEGER NOT NULL
@@ -114,7 +115,7 @@ CREATE TABLE IF NOT EXISTS budget_ledger (
 );
 `;
 
-export function openDatabase(filePath: string): DatabaseSync {
+export function openDatabase(filePath: string): Database {
   if (filePath !== ":memory:") {
     mkdirSync(dirname(filePath), { recursive: true });
   }
@@ -122,19 +123,14 @@ export function openDatabase(filePath: string): DatabaseSync {
   database.exec("PRAGMA foreign_keys = ON");
   database.exec("PRAGMA journal_mode = WAL");
   migrate(database);
-  return database;
+  return new LocalDatabase(database);
 }
 
-export function transaction<T>(database: DatabaseSync, run: () => T): T {
-  database.exec("BEGIN IMMEDIATE");
-  try {
-    const result = run();
-    database.exec("COMMIT");
-    return result;
-  } catch (error) {
-    database.exec("ROLLBACK");
-    throw error;
-  }
+export function transaction<T>(
+  database: Database,
+  run: (database: Database) => Promise<T>,
+): Promise<T> {
+  return database.transaction(run);
 }
 
 export function changedRows(result: { changes: number | bigint }): number {

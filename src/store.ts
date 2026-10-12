@@ -1,8 +1,7 @@
-import type { DatabaseSync } from "node:sqlite";
+import type { Database } from "./database-port.js";
 import { assertTransition, type CheckpointStep, type JobStatus } from "./constants.js";
 import { changedRows } from "./db.js";
 import { NightshiftError } from "./errors.js";
-
 export interface JobRecord {
   id: string;
   status: JobStatus;
@@ -16,14 +15,12 @@ export interface JobRecord {
   created_at: string;
   updated_at: string;
 }
-
 export interface LeaseRecord {
   job_id: string;
   generation: number;
   holder: string;
   expires_at: string;
 }
-
 export interface CheckpointRecord {
   id: string;
   job_id: string;
@@ -32,7 +29,6 @@ export interface CheckpointRecord {
   payload_json: string;
   created_at: string;
 }
-
 export interface OperationRecord {
   operation_id: string;
   job_id: string;
@@ -43,7 +39,6 @@ export interface OperationRecord {
   created_at: string;
   updated_at: string;
 }
-
 export interface ArtifactRecord {
   id: string;
   job_id: string;
@@ -54,7 +49,6 @@ export interface ArtifactRecord {
   file_path: string | null;
   created_at: string;
 }
-
 export interface AttemptRecord {
   id: string;
   job_id: string;
@@ -63,7 +57,6 @@ export interface AttemptRecord {
   evidence_json: string;
   created_at: string;
 }
-
 export interface ErrorRecord {
   id: string;
   job_id: string;
@@ -71,9 +64,8 @@ export interface ErrorRecord {
   source: string;
   created_at: string;
 }
-
-export function insertJob(database: DatabaseSync, job: JobRecord): void {
-  database
+export async function insertJob(database: Database, job: JobRecord): Promise<void> {
+  await database
     .prepare(
       `INSERT INTO jobs (
         id, status, input_hash, pipeline_version, input_json, artifact_id,
@@ -94,30 +86,27 @@ export function insertJob(database: DatabaseSync, job: JobRecord): void {
       job.updated_at,
     );
 }
-
-export function getJob(database: DatabaseSync, jobId: string): JobRecord | null {
-  const row = database.prepare("SELECT * FROM jobs WHERE id = ?").get(jobId);
+export async function getJob(database: Database, jobId: string): Promise<JobRecord | null> {
+  const row = await database.prepare("SELECT * FROM jobs WHERE id = ?").get(jobId);
   return row ? mapJob(row) : null;
 }
-
-export function requireJob(database: DatabaseSync, jobId: string): JobRecord {
-  const job = getJob(database, jobId);
+export async function requireJob(database: Database, jobId: string): Promise<JobRecord> {
+  const job = await getJob(database, jobId);
   if (!job) {
     throw new NightshiftError("job_missing", `Job ${jobId} does not exist.`);
   }
   return job;
 }
-
-export function transitionJob(
-  database: DatabaseSync,
+export async function transitionJob(
+  database: Database,
   jobId: string,
   to: JobStatus,
   at: string,
   reason: string | null,
-): void {
-  const job = requireJob(database, jobId);
+): Promise<void> {
+  const job = await requireJob(database, jobId);
   assertTransition(job.status, to);
-  database
+  await database
     .prepare(
       `UPDATE jobs
        SET status = ?, updated_at = ?, escalation_reason = COALESCE(?, escalation_reason)
@@ -125,39 +114,35 @@ export function transitionJob(
     )
     .run(to, at, reason, jobId);
 }
-
-export function setArtifactId(
-  database: DatabaseSync,
+export async function setArtifactId(
+  database: Database,
   jobId: string,
   artifactId: string,
   at: string,
-): void {
-  database
+): Promise<void> {
+  await database
     .prepare("UPDATE jobs SET artifact_id = ?, updated_at = ? WHERE id = ?")
     .run(artifactId, at, jobId);
 }
-
-export function insertLease(database: DatabaseSync, lease: LeaseRecord): void {
-  database
+export async function insertLease(database: Database, lease: LeaseRecord): Promise<void> {
+  await database
     .prepare("INSERT INTO leases (job_id, generation, holder, expires_at) VALUES (?, ?, ?, ?)")
     .run(lease.job_id, lease.generation, lease.holder, lease.expires_at);
 }
-
-export function getLease(database: DatabaseSync, jobId: string): LeaseRecord | null {
-  const row = database.prepare("SELECT * FROM leases WHERE job_id = ?").get(jobId);
+export async function getLease(database: Database, jobId: string): Promise<LeaseRecord | null> {
+  const row = await database.prepare("SELECT * FROM leases WHERE job_id = ?").get(jobId);
   return row ? mapLease(row) : null;
 }
-
-export function compareAndSwapLease(
-  database: DatabaseSync,
+export async function compareAndSwapLease(
+  database: Database,
   jobId: string,
   observedGeneration: number,
   nextGeneration: number,
   holder: string,
   expiresAt: string,
   nowIso: string,
-): boolean {
-  const result = database
+): Promise<boolean> {
+  const result = await database
     .prepare(
       `UPDATE leases
        SET generation = ?, holder = ?, expires_at = ?
@@ -166,13 +151,26 @@ export function compareAndSwapLease(
     .run(nextGeneration, holder, expiresAt, jobId, observedGeneration, nowIso);
   return changedRows(result) === 1;
 }
-
-export function expireLease(database: DatabaseSync, jobId: string, expiresAt: string): void {
-  database.prepare("UPDATE leases SET expires_at = ? WHERE job_id = ?").run(expiresAt, jobId);
+export async function expireLease(
+  database: Database,
+  jobId: string,
+  expiresAt: string,
+  generation?: number,
+): Promise<void> {
+  if (generation !== undefined) {
+    await database
+      .prepare("UPDATE leases SET expires_at = ? WHERE job_id = ? AND generation = ?")
+      .run(expiresAt, jobId, generation);
+    return;
+  }
+  await database.prepare("UPDATE leases SET expires_at = ? WHERE job_id = ?").run(expiresAt, jobId);
 }
 
-export function insertCheckpoint(database: DatabaseSync, checkpoint: CheckpointRecord): void {
-  database
+export async function insertCheckpoint(
+  database: Database,
+  checkpoint: CheckpointRecord,
+): Promise<void> {
+  await database
     .prepare(
       `INSERT INTO checkpoints (id, job_id, step, generation, payload_json, created_at)
        VALUES (?, ?, ?, ?, ?, ?)`,
@@ -186,11 +184,14 @@ export function insertCheckpoint(database: DatabaseSync, checkpoint: CheckpointR
       checkpoint.created_at,
     );
 }
-
-export function listCheckpoints(database: DatabaseSync, jobId: string): CheckpointRecord[] {
-  return database
-    .prepare(
-      `SELECT * FROM checkpoints
+export async function listCheckpoints(
+  database: Database,
+  jobId: string,
+): Promise<CheckpointRecord[]> {
+  return (
+    await database
+      .prepare(
+        `SELECT * FROM checkpoints
        WHERE job_id = ?
        ORDER BY CASE step
          WHEN 'input_accepted' THEN 1
@@ -200,13 +201,15 @@ export function listCheckpoints(database: DatabaseSync, jobId: string): Checkpoi
          WHEN 'reconciled' THEN 5
          ELSE 0
        END ASC`,
-    )
-    .all(jobId)
-    .map((row) => mapCheckpoint(row));
+      )
+      .all(jobId)
+  ).map((row) => mapCheckpoint(row));
 }
-
-export function latestCheckpoint(database: DatabaseSync, jobId: string): CheckpointRecord | null {
-  const row = database
+export async function latestCheckpoint(
+  database: Database,
+  jobId: string,
+): Promise<CheckpointRecord | null> {
+  const row = await database
     .prepare(
       `SELECT * FROM checkpoints
        WHERE job_id = ?
@@ -223,9 +226,11 @@ export function latestCheckpoint(database: DatabaseSync, jobId: string): Checkpo
     .get(jobId);
   return row ? mapCheckpoint(row) : null;
 }
-
-export function insertOperation(database: DatabaseSync, operation: OperationRecord): void {
-  database
+export async function insertOperation(
+  database: Database,
+  operation: OperationRecord,
+): Promise<void> {
+  await database
     .prepare(
       `INSERT INTO operations (
         operation_id, job_id, action, observed_generation, status, result_json, created_at, updated_at
@@ -242,28 +247,30 @@ export function insertOperation(database: DatabaseSync, operation: OperationReco
       operation.updated_at,
     );
 }
-
-export function getOperation(database: DatabaseSync, operationId: string): OperationRecord | null {
-  const row = database.prepare("SELECT * FROM operations WHERE operation_id = ?").get(operationId);
+export async function getOperation(
+  database: Database,
+  operationId: string,
+): Promise<OperationRecord | null> {
+  const row = await database
+    .prepare("SELECT * FROM operations WHERE operation_id = ?")
+    .get(operationId);
   return row ? mapOperation(row) : null;
 }
-
-export function finishOperation(
-  database: DatabaseSync,
+export async function finishOperation(
+  database: Database,
   operationId: string,
   status: "succeeded" | "failed",
   resultJson: string,
   at: string,
-): void {
-  database
+): Promise<void> {
+  await database
     .prepare(
       "UPDATE operations SET status = ?, result_json = ?, updated_at = ? WHERE operation_id = ?",
     )
     .run(status, resultJson, at, operationId);
 }
-
-export function insertArtifact(database: DatabaseSync, artifact: ArtifactRecord): void {
-  database
+export async function insertArtifact(database: Database, artifact: ArtifactRecord): Promise<void> {
+  await database
     .prepare(
       `INSERT INTO artifacts (
         id, job_id, pipeline_version, input_hash, content_hash, body_json, file_path, created_at
@@ -280,21 +287,25 @@ export function insertArtifact(database: DatabaseSync, artifact: ArtifactRecord)
       artifact.created_at,
     );
 }
-
-export function getArtifact(database: DatabaseSync, jobId: string): ArtifactRecord | null {
-  const row = database.prepare("SELECT * FROM artifacts WHERE job_id = ?").get(jobId);
+export async function getArtifact(
+  database: Database,
+  jobId: string,
+): Promise<ArtifactRecord | null> {
+  const row = await database.prepare("SELECT * FROM artifacts WHERE job_id = ?").get(jobId);
   return row ? mapArtifact(row) : null;
 }
-
-export function countArtifacts(database: DatabaseSync, jobId: string): number {
-  const row = database
+export async function countArtifacts(database: Database, jobId: string): Promise<number> {
+  const row = (await database
     .prepare("SELECT COUNT(*) AS count FROM artifacts WHERE job_id = ?")
-    .get(jobId) as { count: number } | undefined;
+    .get(jobId)) as
+    | {
+        count: number;
+      }
+    | undefined;
   return Number(row?.count ?? 0);
 }
-
-export function insertAttempt(database: DatabaseSync, attempt: AttemptRecord): void {
-  database
+export async function insertAttempt(database: Database, attempt: AttemptRecord): Promise<void> {
+  await database
     .prepare(
       `INSERT INTO attempts (id, job_id, kind, outcome, evidence_json, created_at)
        VALUES (?, ?, ?, ?, ?, ?)`,
@@ -308,27 +319,25 @@ export function insertAttempt(database: DatabaseSync, attempt: AttemptRecord): v
       attempt.created_at,
     );
 }
-
-export function listAttempts(database: DatabaseSync, jobId: string): AttemptRecord[] {
-  return database
-    .prepare("SELECT * FROM attempts WHERE job_id = ? ORDER BY created_at ASC, id ASC")
-    .all(jobId)
-    .map((row) => mapAttempt(row));
+export async function listAttempts(database: Database, jobId: string): Promise<AttemptRecord[]> {
+  return (
+    await database
+      .prepare("SELECT * FROM attempts WHERE job_id = ? ORDER BY created_at ASC, id ASC")
+      .all(jobId)
+  ).map((row) => mapAttempt(row));
 }
-
-export function insertError(database: DatabaseSync, entry: ErrorRecord): void {
-  database
+export async function insertError(database: Database, entry: ErrorRecord): Promise<void> {
+  await database
     .prepare("INSERT INTO errors (id, job_id, message, source, created_at) VALUES (?, ?, ?, ?, ?)")
     .run(entry.id, entry.job_id, entry.message, entry.source, entry.created_at);
 }
-
-export function listErrors(database: DatabaseSync, jobId: string): ErrorRecord[] {
-  return database
-    .prepare("SELECT * FROM errors WHERE job_id = ? ORDER BY created_at ASC, id ASC")
-    .all(jobId)
-    .map((row) => mapError(row));
+export async function listErrors(database: Database, jobId: string): Promise<ErrorRecord[]> {
+  return (
+    await database
+      .prepare("SELECT * FROM errors WHERE job_id = ? ORDER BY created_at ASC, id ASC")
+      .all(jobId)
+  ).map((row) => mapError(row));
 }
-
 function mapJob(row: unknown): JobRecord {
   const record = asRecord(row);
   return {
@@ -345,7 +354,6 @@ function mapJob(row: unknown): JobRecord {
     updated_at: asString(record, "updated_at"),
   };
 }
-
 function mapLease(row: unknown): LeaseRecord {
   const record = asRecord(row);
   return {
@@ -355,7 +363,6 @@ function mapLease(row: unknown): LeaseRecord {
     expires_at: asString(record, "expires_at"),
   };
 }
-
 function mapCheckpoint(row: unknown): CheckpointRecord {
   const record = asRecord(row);
   return {
@@ -367,7 +374,6 @@ function mapCheckpoint(row: unknown): CheckpointRecord {
     created_at: asString(record, "created_at"),
   };
 }
-
 function mapOperation(row: unknown): OperationRecord {
   const record = asRecord(row);
   return {
@@ -381,7 +387,6 @@ function mapOperation(row: unknown): OperationRecord {
     updated_at: asString(record, "updated_at"),
   };
 }
-
 function mapArtifact(row: unknown): ArtifactRecord {
   const record = asRecord(row);
   return {
@@ -395,7 +400,6 @@ function mapArtifact(row: unknown): ArtifactRecord {
     created_at: asString(record, "created_at"),
   };
 }
-
 function mapAttempt(row: unknown): AttemptRecord {
   const record = asRecord(row);
   return {
@@ -407,7 +411,6 @@ function mapAttempt(row: unknown): AttemptRecord {
     created_at: asString(record, "created_at"),
   };
 }
-
 function mapError(row: unknown): ErrorRecord {
   const record = asRecord(row);
   return {
@@ -418,14 +421,12 @@ function mapError(row: unknown): ErrorRecord {
     created_at: asString(record, "created_at"),
   };
 }
-
 function asRecord(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object") {
     throw new NightshiftError("corrupt_row", "Database row was not an object.");
   }
   return value as Record<string, unknown>;
 }
-
 function asString(record: Record<string, unknown>, key: string): string {
   const value = record[key];
   if (typeof value !== "string") {
@@ -433,7 +434,6 @@ function asString(record: Record<string, unknown>, key: string): string {
   }
   return value;
 }
-
 function asNullableString(record: Record<string, unknown>, key: string): string | null {
   const value = record[key];
   if (value === null) {
@@ -441,7 +441,6 @@ function asNullableString(record: Record<string, unknown>, key: string): string 
   }
   return asString(record, key);
 }
-
 function asNumber(record: Record<string, unknown>, key: string): number {
   const value = record[key];
   if (typeof value !== "number") {
@@ -449,7 +448,6 @@ function asNumber(record: Record<string, unknown>, key: string): number {
   }
   return value;
 }
-
 function asNullableNumber(record: Record<string, unknown>, key: string): number | null {
   const value = record[key];
   if (value === null) {

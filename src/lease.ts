@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { DatabaseSync } from "node:sqlite";
+import type { Database } from "./database-port.js";
 import type { Clock } from "./clock.js";
 import { LEASE_HOLDER, LEASE_TTL_MS } from "./constants.js";
 import { transaction } from "./db.js";
@@ -12,23 +12,19 @@ import {
   transitionJob,
   type LeaseRecord,
 } from "./store.js";
-
 export type LeaseState = "active" | "expired" | "missing" | "uncertain";
-
 export interface LeaseObservation {
   lease_state: LeaseState;
   generation: number | null;
   holder: string | null;
   expires_at: string | null;
 }
-
 export interface ReclaimResult {
   ok: boolean;
   code: string;
   generation: number | null;
   expires_at: string | null;
 }
-
 export function observeLease(lease: LeaseRecord | null, now: Date): LeaseObservation {
   if (!lease) {
     return { lease_state: "missing", generation: null, holder: null, expires_at: null };
@@ -49,26 +45,25 @@ export function observeLease(lease: LeaseRecord | null, now: Date): LeaseObserva
     expires_at: lease.expires_at,
   };
 }
-
-export function reclaimExpiredLease(
-  database: DatabaseSync,
+export async function reclaimExpiredLease(
+  database: Database,
   jobId: string,
   observedGeneration: number,
   clock: Clock,
   ttlMs = LEASE_TTL_MS,
-): ReclaimResult {
+): Promise<ReclaimResult> {
   const now = clock.now();
   const nowIso = now.toISOString();
-  return transaction(database, () => {
-    const job = requireJob(database, jobId);
+  return await transaction(database, async (boundDatabase) => {
+    const job = await requireJob(boundDatabase, jobId);
     if (job.status === "completed" || job.status === "escalated") {
       const result = { ok: false, code: "terminal_job", generation: null, expires_at: null };
-      recordReclaim(database, jobId, result.code, nowIso, {
+      await recordReclaim(boundDatabase, jobId, result.code, nowIso, {
         observed_generation: observedGeneration,
       });
       return result;
     }
-    const lease = getLease(database, jobId);
+    const lease = await getLease(boundDatabase, jobId);
     const observed = observeLease(lease, now);
     if (observed.lease_state !== "expired" || observed.generation === null) {
       const result = {
@@ -77,7 +72,7 @@ export function reclaimExpiredLease(
         generation: observed.generation,
         expires_at: observed.expires_at,
       };
-      recordReclaim(database, jobId, result.code, nowIso, {
+      await recordReclaim(boundDatabase, jobId, result.code, nowIso, {
         observed_generation: observedGeneration,
         lease_state: observed.lease_state,
       });
@@ -90,15 +85,15 @@ export function reclaimExpiredLease(
         generation: observed.generation,
         expires_at: observed.expires_at,
       };
-      recordReclaim(database, jobId, result.code, nowIso, {
+      await recordReclaim(boundDatabase, jobId, result.code, nowIso, {
         observed_generation: observedGeneration,
       });
       return result;
     }
     const nextGeneration = observed.generation + 1;
     const expiresAt = new Date(now.getTime() + ttlMs).toISOString();
-    const swapped = compareAndSwapLease(
-      database,
+    const swapped = await compareAndSwapLease(
+      boundDatabase,
       jobId,
       observedGeneration,
       nextGeneration,
@@ -113,37 +108,36 @@ export function reclaimExpiredLease(
         generation: observed.generation,
         expires_at: null,
       };
-      recordReclaim(database, jobId, result.code, nowIso, {
+      await recordReclaim(boundDatabase, jobId, result.code, nowIso, {
         observed_generation: observedGeneration,
       });
       return result;
     }
     if (job.status === "running") {
-      transitionJob(database, jobId, "stalled", nowIso, null);
+      await transitionJob(boundDatabase, jobId, "stalled", nowIso, null);
     }
-    transitionJob(database, jobId, "recovering", nowIso, null);
+    await transitionJob(boundDatabase, jobId, "recovering", nowIso, null);
     const result = {
       ok: true,
       code: "reclaimed",
       generation: nextGeneration,
       expires_at: expiresAt,
     };
-    recordReclaim(database, jobId, result.code, nowIso, {
+    await recordReclaim(boundDatabase, jobId, result.code, nowIso, {
       observed_generation: observedGeneration,
       generation: nextGeneration,
     });
     return result;
   });
 }
-
-function recordReclaim(
-  database: DatabaseSync,
+async function recordReclaim(
+  database: Database,
   jobId: string,
   outcome: string,
   at: string,
   evidence: Record<string, unknown>,
-): void {
-  insertAttempt(database, {
+): Promise<void> {
+  await insertAttempt(database, {
     id: `attempt_${randomUUID()}`,
     job_id: jobId,
     kind: "reclaim_lease",

@@ -30,3 +30,6 @@ films/*/public/captures/
 hackathon.md
 docs/JUDGING_REVIEW.md
 films/nightshift-demo/INCIDENT_UPDATE.md
+.vercel/
+.agents/skills/turso-cloud/
+skills-lock.json

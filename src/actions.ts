@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { DatabaseSync } from "node:sqlite";
+import type { Database } from "./database-port.js";
 import type { Clock } from "./clock.js";
 import { CODE_VERSION } from "./constants.js";
 import type {
@@ -25,56 +25,61 @@ import {
   transitionJob,
 } from "./store.js";
 import { verifyArtifact } from "./verifier.js";
-
 export interface ActionContext {
-  database: DatabaseSync;
+  database: Database;
   clock: Clock;
   artifactDir: string;
   jobId: string;
   controlledFault?: "resume_ack_lost";
 }
-
-export function executeTool(
+export async function executeTool(
   input: ActionContext,
-  decision: { tool: ToolName; arguments: Record<string, unknown> },
+  decision: {
+    tool: ToolName;
+    arguments: Record<string, unknown>;
+  },
   memory: AgentMemory,
-): unknown {
+): Promise<unknown> {
   const observedAt = input.clock.now().toISOString();
   const observationId = `obs_${randomUUID()}`;
   switch (decision.tool) {
     case "inspect_job":
-      return inspectJob(input, observationId, observedAt);
+      return await inspectJob(input, observationId, observedAt);
     case "inspect_worker":
-      return inspectWorker(input, observationId, observedAt);
+      return await inspectWorker(input, observationId, observedAt);
     case "read_checkpoint":
-      return readCheckpoint(input, observationId, observedAt);
+      return await readCheckpoint(input, observationId, observedAt);
     case "read_recent_errors":
-      return readErrors(input, observationId, observedAt);
+      return await readErrors(input, observationId, observedAt);
     case "reclaim_expired_lease":
-      return reclaim(input, decision.arguments, observationId);
+      return await reclaim(input, decision.arguments, observationId);
     case "resume_job":
-      return resume(input, decision.arguments);
+      return await resume(input, decision.arguments);
     case "verify_artifact":
-      return verifyArtifact(input.database, input.jobId, input.clock, input.artifactDir);
+      return await verifyArtifact(input.database, input.jobId, input.clock, input.artifactDir);
     case "escalate_incident":
-      return escalate(input, String(decision.arguments.reason), observationId, memory);
+      return await escalate(input, String(decision.arguments.reason), observationId, memory);
     default:
       throw new NightshiftError("unknown_tool", "The tool is not allowlisted.");
   }
 }
-
-export function escalate(
+export async function escalate(
   input: ActionContext,
   reason: string,
   observationId = `obs_${randomUUID()}`,
   memory?: AgentMemory,
-): { escalated: true; reason: string; job_status: string; observation_id: string } {
+): Promise<{
+  escalated: true;
+  reason: string;
+  job_status: string;
+  observation_id: string;
+}> {
   const now = input.clock.now().toISOString();
-  const job = requireJob(input.database, input.jobId);
+  const job = await requireJob(input.database, input.jobId);
   if (job.status !== "completed" && job.status !== "escalated") {
-    transitionJob(input.database, input.jobId, "escalated", now, reason);
+    await transitionJob(input.database, input.jobId, "escalated", now, reason);
   }
-  insertAttempt(input.database, {
+  await insertAttempt(input.database, {
     id: `attempt_${randomUUID()}`,
     job_id: input.jobId,
     kind: "escalate_incident",
@@ -88,7 +93,7 @@ export function escalate(
     }),
     created_at: now,
   });
-  insertError(input.database, {
+  await insertError(input.database, {
     id: `error_${randomUUID()}`,
     job_id: input.jobId,
     message: `Escalated: ${reason}`,
@@ -98,13 +103,16 @@ export function escalate(
   return {
     escalated: true,
     reason,
-    job_status: requireJob(input.database, input.jobId).status,
+    job_status: (await requireJob(input.database, input.jobId)).status,
     observation_id: observationId,
   };
 }
-
-function inspectJob(input: ActionContext, observationId: string, observedAt: string): unknown {
-  const job = requireJob(input.database, input.jobId);
+async function inspectJob(
+  input: ActionContext,
+  observationId: string,
+  observedAt: string,
+): Promise<unknown> {
+  const job = await requireJob(input.database, input.jobId);
   const observation: JobObservation = {
     id: job.id,
     status: job.status,
@@ -114,15 +122,21 @@ function inspectJob(input: ActionContext, observationId: string, observedAt: str
   };
   return { ...observation, observed_at: observedAt, code_version: CODE_VERSION };
 }
-
-function inspectWorker(input: ActionContext, observationId: string, observedAt: string): unknown {
-  const observed = observeLease(getLease(input.database, input.jobId), input.clock.now());
+async function inspectWorker(
+  input: ActionContext,
+  observationId: string,
+  observedAt: string,
+): Promise<unknown> {
+  const observed = observeLease(await getLease(input.database, input.jobId), input.clock.now());
   const observation: WorkerObservation = { ...observed, observation_id: observationId };
   return { ...observation, observed_at: observedAt };
 }
-
-function readCheckpoint(input: ActionContext, observationId: string, observedAt: string): unknown {
-  const checkpoint = latestCheckpoint(input.database, input.jobId);
+async function readCheckpoint(
+  input: ActionContext,
+  observationId: string,
+  observedAt: string,
+): Promise<unknown> {
+  const checkpoint = await latestCheckpoint(input.database, input.jobId);
   const observation: CheckpointObservation = {
     id: checkpoint?.id ?? null,
     step: checkpoint?.step ?? null,
@@ -131,40 +145,39 @@ function readCheckpoint(input: ActionContext, observationId: string, observedAt:
   };
   return { ...observation, observed_at: observedAt };
 }
-
-function readErrors(input: ActionContext, observationId: string, observedAt: string): unknown {
-  const errors = listErrors(input.database, input.jobId)
-    .slice(-10)
-    .map((entry) => ({
-      id: entry.id,
-      source: entry.source,
-      untrusted: true,
-      message: redact(entry.message).slice(0, 240),
-    }));
+async function readErrors(
+  input: ActionContext,
+  observationId: string,
+  observedAt: string,
+): Promise<unknown> {
+  const errors = (await listErrors(input.database, input.jobId)).slice(-10).map((entry) => ({
+    id: entry.id,
+    source: entry.source,
+    untrusted: true,
+    message: redact(entry.message).slice(0, 240),
+  }));
   return { observation_id: observationId, observed_at: observedAt, errors };
 }
-
-function reclaim(
+async function reclaim(
   input: ActionContext,
   args: Record<string, unknown>,
   observationId: string,
-): unknown {
+): Promise<unknown> {
   const observedGeneration = args.observed_generation;
   if (typeof observedGeneration !== "number") {
     throw new NightshiftError("invalid_arguments", "Observed generation is missing.");
   }
   return {
-    ...reclaimExpiredLease(input.database, input.jobId, observedGeneration, input.clock),
+    ...(await reclaimExpiredLease(input.database, input.jobId, observedGeneration, input.clock)),
     observation_id: observationId,
   };
 }
-
-function resume(input: ActionContext, args: Record<string, unknown>): unknown {
+async function resume(input: ActionContext, args: Record<string, unknown>): Promise<unknown> {
   const loseAcknowledgement =
     input.controlledFault === "resume_ack_lost" &&
-    getArtifact(input.database, input.jobId) === null;
+    (await getArtifact(input.database, input.jobId)) === null;
   try {
-    return resumeJob(
+    return await resumeJob(
       input.database,
       input.jobId,
       String(args.checkpoint_id),
@@ -181,7 +194,7 @@ function resume(input: ActionContext, args: Record<string, unknown>): unknown {
   } catch (error) {
     if (isNightshiftError(error) && error.code === "injected_crash") {
       const at = input.clock.now().toISOString();
-      insertAttempt(input.database, {
+      await insertAttempt(input.database, {
         id: `attempt_${randomUUID()}`,
         job_id: input.jobId,
         kind: "resume_job",
@@ -189,7 +202,7 @@ function resume(input: ActionContext, args: Record<string, unknown>): unknown {
         evidence_json: canonicalJson({ operation_id: args.operation_id, code: error.code }),
         created_at: at,
       });
-      insertError(input.database, {
+      await insertError(input.database, {
         id: `error_${randomUUID()}`,
         job_id: input.jobId,
         message: "Controlled demo: resume acknowledgement lost after the artifact commit.",

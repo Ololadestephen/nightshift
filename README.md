@@ -22,7 +22,7 @@ Live model runs stay off until `NIGHTSHIFT_SPEND_APPROVED=1`, a server-side Lite
 
 neatlogs spans wrap the live model and tool calls when `NEATLOGS_API_KEY` is present, and the local journal records each call's duration. Token usage is copied from the provider response when that response includes it. A missing or failed export leaves the job result in place and is labelled separately. A fresh invocation can resume a job already in `recovering` when this worker still holds the active lease. A tool exception or an unexpected model error escalates the job and keeps a terminal trace.
 
-While a required observation is missing, the request offers those reads. A verifying or completed job is offered only `verify_artifact`. After an uncertain resume acknowledgement, the model reads a new checkpoint; a published checkpoint then offers verification instead of repeating the repair. An expired lease is offered reclaim and escalate. A reclaimed job is offered resume and escalate. An active, missing, or uncertain hold is offered only escalate. That is a bounded workflow for this pipeline. The narrated two-minute video is locally complete; public video upload and deployment remain open. The cfo.ai workbook under `evidence/cfo/` is an assumption forecast. Actual Entire checkpoint evidence is under `evidence/entire/`.
+While a required observation is missing, the request offers those reads. A verifying or completed job is offered only `verify_artifact`. After an uncertain resume acknowledgement, the model reads a new checkpoint; a published checkpoint then offers verification instead of repeating the repair. An expired lease is offered reclaim and escalate. A reclaimed job is offered resume and escalate. An active, missing, or uncertain hold is offered only escalate. That is a bounded workflow for this pipeline. The narrated two-minute video is locally complete; public video upload remains open. The cfo.ai workbook under `evidence/cfo/` is an assumption forecast. Actual Entire checkpoint evidence is under `evidence/entire/`.
 
 ## Run the application
 
@@ -54,7 +54,13 @@ The interface uses local fonts, native browser controls and responsive layouts. 
 
 ## Deployment
 
-Do not put the SQLite file on an ephemeral disk. Point the process at a persistent directory by running it with that directory as the working directory, because `npm run serve` stores `data/local/nightshift.sqlite` and `data/local/artifacts/` under `process.cwd()`. Keep the process running after the shell exits. Bind `NIGHTSHIFT_HOST` only when the port should be reachable, and set `NIGHTSHIFT_COOKIE_SECURE=1` behind HTTPS. Keep `LITELLM_API_KEY` and `NEATLOGS_API_KEY` in the server environment, never in frontend code. A spend flag alone does not enable live runs: both budget numbers must be set as well. This repository has not been deployed.
+The Vercel entry in `api/index.ts` uses a dedicated Turso database through `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN`. The landing page and workspace assets are served from `public/`. Hosted reports are stored as canonical JSON in the database and reconciled against their original rows, input hash and content hash; no persistent function filesystem is required. Local CLI runs retain SQLite and file verification.
+
+Set `NIGHTSHIFT_INVITE_CODE` before allowing hosted sessions. Hosted cookies are Secure and HttpOnly, each session can access only its own jobs, and the cloud entry disables the fault-injection lab. Keep model and neatlogs keys in Vercel's secret environment variables. Live runs require explicit spend approval and both budget numbers. When moving an existing deployment, carry its budget ledger forward rather than starting the allowance again.
+
+The bounded worker and agent use Vercel `waitUntil` with a 300-second function limit. Progress, operations and checkpoints are persisted between steps. This does not guarantee background execution after a platform termination: a run with no update for 330 seconds is retained as interrupted, and a later authorized run must inspect its current checkpoint and lease before proceeding. Database uniqueness and generation fencing prevent duplicate artifact rows and stale repairs; external exactly-once execution is not claimed.
+
+For a standalone local server, keep `data/local/` on persistent disk and use `NIGHTSHIFT_COOKIE_SECURE=1` behind HTTPS. Both deployment modes use the same policy and reconciliation tests.
 
 ## Product loop
 

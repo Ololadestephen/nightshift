@@ -29,6 +29,7 @@ import {
   countSessions,
   getSession,
   insertSession,
+  interruptStaleRuns,
   latestRun,
   listOwnedJobIds,
 } from "./records.js";
@@ -48,7 +49,13 @@ import {
   parseDataset,
 } from "./submit.js";
 const PUBLIC_DIR = join(dirname(fileURLToPath(import.meta.url)), "../../public");
-const STATIC: Record<string, { file: string; type: string }> = {
+const STATIC: Record<
+  string,
+  {
+    file: string;
+    type: string;
+  }
+> = {
   "/": { file: "index.html", type: "text/html; charset=utf-8" },
   "/app.css": { file: "app.css", type: "text/css; charset=utf-8" },
   "/app.js": { file: "app.js", type: "text/javascript; charset=utf-8" },
@@ -70,7 +77,6 @@ for (const name of [
 ]) {
   STATIC[`/styles/${name}.css`] = { file: `styles/${name}.css`, type: "text/css; charset=utf-8" };
 }
-
 export interface AppOptions {
   root: string;
   env: NodeJS.ProcessEnv;
@@ -80,12 +86,10 @@ export interface AppOptions {
   lab?: boolean;
   model?: ModelClient;
 }
-
 export interface RunningApp {
   url: string;
   close: () => Promise<void>;
 }
-
 export async function startApp(options: AppOptions): Promise<RunningApp> {
   const artifactDir = join(options.root, "artifacts");
   const journalDir = join(options.root, "traces");
@@ -101,7 +105,7 @@ export async function startApp(options: AppOptions): Promise<RunningApp> {
     ...(options.model ? { model: options.model } : {}),
   };
   const lab = options.lab ?? options.env.NIGHTSHIFT_LAB === "1";
-  resumeOnBoot(paths);
+  await resumeOnBoot(paths);
   const server = createServer((request, response) => {
     void handle(request, response, paths, lab).catch((error: unknown) => {
       const coded = isNightshiftError(error) ? error.code : "request_failed";
@@ -130,8 +134,7 @@ export async function startApp(options: AppOptions): Promise<RunningApp> {
       }),
   };
 }
-
-async function handle(
+export async function handle(
   request: IncomingMessage,
   response: ServerResponse,
   paths: RunnerPaths,
@@ -144,11 +147,14 @@ async function handle(
     sendFile(response, file);
     return;
   }
+  if (paths.env.VERCEL === "1") {
+    await interruptStaleRuns(paths.database, paths.clock.now().toISOString());
+  }
   if (method === "POST" && pathname === "/api/session") {
     await createSession(request, response, paths, lab);
     return;
   }
-  const sessionId = sessionFrom(request, paths);
+  const sessionId = await sessionFrom(request, paths);
   if (!sessionId) {
     send(response, 401, {
       error: "session_required",
@@ -157,10 +163,11 @@ async function handle(
     return;
   }
   if (method === "GET" && pathname === "/api/jobs") {
-    const jobs = listOwnedJobIds(paths.database, sessionId).flatMap((id) => {
-      const job = jobSummary(paths, id);
-      return job ? [publicJob(job)] : [];
-    });
+    const jobs: Record<string, unknown>[] = [];
+    for (const id of await listOwnedJobIds(paths.database, sessionId)) {
+      const job = await jobSummary(paths, id);
+      if (job) jobs.push(publicJob(job));
+    }
     send(response, 200, { jobs });
     return;
   }
@@ -178,7 +185,7 @@ async function handle(
       send(response, 404, { error: "not_found", message: "That page does not exist." });
       return;
     }
-    const started = startLabRun(paths, labRun[1], sessionId);
+    const started = await startLabRun(paths, labRun[1], sessionId);
     if (!started.ok) {
       send(response, started.status, { error: started.code, message: started.message });
       return;
@@ -198,7 +205,7 @@ async function handle(
   const jobId = jobMatch[1];
   const suffix = jobMatch[2] ?? "";
   if (method === "GET" && suffix === "") {
-    const detail = jobDetail(paths, jobId, sessionId);
+    const detail = await jobDetail(paths, jobId, sessionId);
     if (!detail) {
       send(response, 404, { error: "not_found", message: "That report job was not found." });
       return;
@@ -207,11 +214,11 @@ async function handle(
     return;
   }
   if (method === "GET" && suffix === "/report") {
-    sendReport(response, paths, jobId, sessionId);
+    await sendReport(response, paths, jobId, sessionId);
     return;
   }
   if (method === "POST" && suffix === "/runs") {
-    const started = startLiveRun(paths, jobId, sessionId);
+    const started = await startLiveRun(paths, jobId, sessionId);
     if (!started.ok) {
       send(response, started.status, { error: started.code, message: started.message });
       return;
@@ -224,19 +231,25 @@ async function handle(
   }
   send(response, 404, { error: "not_found", message: "That page does not exist." });
 }
-
 async function createSession(
   request: IncomingMessage,
   response: ServerResponse,
   paths: RunnerPaths,
   lab: boolean,
 ): Promise<void> {
-  const existing = sessionFrom(request, paths);
+  const existing = await sessionFrom(request, paths);
   if (existing) {
-    send(response, 200, sessionBody(paths, lab));
+    send(response, 200, await sessionBody(paths, lab));
     return;
   }
   const invite = paths.env.NIGHTSHIFT_INVITE_CODE?.trim() ?? "";
+  if (paths.env.VERCEL === "1" && !invite) {
+    send(response, 503, {
+      error: "access_not_configured",
+      message: "Access has not been configured.",
+    });
+    return;
+  }
   if (invite) {
     const body = await readJson(request).catch((error: unknown) => {
       replyInput(response, error);
@@ -247,7 +260,13 @@ async function createSession(
     }
     const supplied =
       body && typeof body === "object" && "invite" in body
-        ? String((body as { invite: unknown }).invite)
+        ? String(
+            (
+              body as {
+                invite: unknown;
+              }
+            ).invite,
+          )
         : "";
     if (!sameSecret(supplied, invite)) {
       send(response, 401, {
@@ -260,8 +279,8 @@ async function createSession(
   const now = paths.clock.now();
   const hourAgo = new Date(now.getTime() - SESSION_WINDOW_MS).toISOString();
   if (
-    countSessions(paths.database, null) >= MAX_SESSIONS ||
-    countSessions(paths.database, hourAgo) >= MAX_SESSIONS_PER_HOUR
+    (await countSessions(paths.database, null)) >= MAX_SESSIONS ||
+    (await countSessions(paths.database, hourAgo)) >= MAX_SESSIONS_PER_HOUR
   ) {
     send(response, 429, {
       error: "session_limit",
@@ -270,17 +289,16 @@ async function createSession(
     return;
   }
   const id = `ses_${randomUUID()}`;
-  insertSession(paths.database, id, now.toISOString());
-  send(response, 201, sessionBody(paths, lab), sessionCookie(id, paths.env));
+  await insertSession(paths.database, id, now.toISOString());
+  send(response, 201, await sessionBody(paths, lab), sessionCookie(id, paths.env));
 }
-
 async function createReport(
   request: IncomingMessage,
   response: ServerResponse,
   paths: RunnerPaths,
   sessionId: string,
 ): Promise<void> {
-  if (countOwnedJobs(paths.database, sessionId) >= MAX_JOBS_PER_SESSION) {
+  if ((await countOwnedJobs(paths.database, sessionId)) >= MAX_JOBS_PER_SESSION) {
     send(response, 429, {
       error: "job_limit",
       message: "This session has reached its report limit.",
@@ -299,7 +317,7 @@ async function createReport(
     });
     return;
   }
-  const created = createJob(paths.database, rows, paths.clock, sessionId);
+  const created = await createJob(paths.database, rows, paths.clock, sessionId);
   if (created.generation === 0) {
     send(response, 400, { error: "invalid_input", message: "The dataset was not accepted." });
     return;
@@ -307,7 +325,6 @@ async function createReport(
   enqueueWorker(paths, created.jobId);
   send(response, 202, { job_id: created.jobId });
 }
-
 async function createLab(
   request: IncomingMessage,
   response: ServerResponse,
@@ -328,39 +345,42 @@ async function createLab(
   }
   const scenario =
     body && typeof body === "object" && "scenario" in body
-      ? (body as { scenario: unknown }).scenario
+      ? (
+          body as {
+            scenario: unknown;
+          }
+        ).scenario
       : "";
   if (scenario !== "expired_lease" && scenario !== "active_lease" && scenario !== "completed") {
     send(response, 400, { error: "invalid_input", message: "Choose a labelled lab scenario." });
     return;
   }
-  const jobId = seedScenario(
+  const jobId = await seedScenario(
     paths.database,
     paths.clock,
     paths.artifactDir,
     scenario as DemoScenario,
   );
-  assignJob(paths.database, jobId, sessionId, 0);
+  await assignJob(paths.database, jobId, sessionId, 0);
   send(response, 202, {
     job_id: jobId,
     environment: "controlled_fault_injection",
     scenario,
   });
 }
-
-function jobDetail(
+async function jobDetail(
   paths: RunnerPaths,
   jobId: string,
   sessionId: string,
-): Record<string, unknown> | null {
-  const summary = jobSummary(paths, jobId);
+): Promise<Record<string, unknown> | null> {
+  const summary = await jobSummary(paths, jobId);
   if (!summary || summary.owner_session_id !== sessionId) {
     return null;
   }
-  const artifact = getArtifact(paths.database, jobId);
-  const run = latestRun(paths.database, jobId);
-  const checkpoint = latestCheckpoint(paths.database, jobId);
-  const lease = observeLease(getLease(paths.database, jobId), paths.clock.now());
+  const artifact = await getArtifact(paths.database, jobId);
+  const run = await latestRun(paths.database, jobId);
+  const checkpoint = await latestCheckpoint(paths.database, jobId);
+  const lease = observeLease(await getLease(paths.database, jobId), paths.clock.now());
   return {
     job: publicJob(summary),
     worker: {
@@ -368,21 +388,19 @@ function jobDetail(
       generation: lease.generation,
       step: checkpoint?.step ?? null,
     },
-    checkpoints: listCheckpoints(paths.database, jobId).map((item) => ({
+    checkpoints: (await listCheckpoints(paths.database, jobId)).map((item) => ({
       step: item.step,
       created_at: item.created_at,
     })),
-    attempts: listAttempts(paths.database, jobId).map((attempt) => ({
+    attempts: (await listAttempts(paths.database, jobId)).map((attempt) => ({
       kind: attempt.kind,
       outcome: attempt.outcome,
       created_at: attempt.created_at,
     })),
-    errors: listErrors(paths.database, jobId)
-      .slice(-10)
-      .map((entry) => ({
-        source: entry.source,
-        message: String(redact(entry.message)).slice(0, 240),
-      })),
+    errors: (await listErrors(paths.database, jobId)).slice(-10).map((entry) => ({
+      source: entry.source,
+      message: String(redact(entry.message)).slice(0, 240),
+    })),
     report: artifact
       ? {
           available: true,
@@ -391,16 +409,17 @@ function jobDetail(
         }
       : null,
     run: run ? publicRun(run) : null,
-    live: readLiveGate(paths.env, paths.database),
+    live: await readLiveGate(paths.env, paths.database),
     environment: summary.auto_finish === 0 ? "controlled_fault_injection" : "report",
   };
 }
-
-function jobSummary(paths: RunnerPaths, jobId: string): ReturnType<typeof getJob> {
-  return getJob(paths.database, jobId);
+async function jobSummary(
+  paths: RunnerPaths,
+  jobId: string,
+): Promise<Awaited<ReturnType<typeof getJob>>> {
+  return await getJob(paths.database, jobId);
 }
-
-function publicJob(job: NonNullable<ReturnType<typeof getJob>>): Record<string, unknown> {
+function publicJob(job: NonNullable<Awaited<ReturnType<typeof getJob>>>): Record<string, unknown> {
   const parsed = parseStoredJson(job.input_json);
   const rows = parsed && typeof parsed === "object" && "length" in parsed ? parsed : [];
   return {
@@ -413,8 +432,9 @@ function publicJob(job: NonNullable<ReturnType<typeof getJob>>): Record<string, 
     updated_at: job.updated_at,
   };
 }
-
-function publicRun(run: NonNullable<ReturnType<typeof latestRun>>): Record<string, unknown> {
+function publicRun(
+  run: NonNullable<Awaited<ReturnType<typeof latestRun>>>,
+): Record<string, unknown> {
   return {
     id: run.id,
     status: run.status,
@@ -431,19 +451,18 @@ function publicRun(run: NonNullable<ReturnType<typeof latestRun>>): Record<strin
     local_record: true,
   };
 }
-
-function sendReport(
+async function sendReport(
   response: ServerResponse,
   paths: RunnerPaths,
   jobId: string,
   sessionId: string,
-): void {
-  const job = getJob(paths.database, jobId);
+): Promise<void> {
+  const job = await getJob(paths.database, jobId);
   if (!job || job.owner_session_id !== sessionId) {
     send(response, 404, { error: "not_found", message: "That report job was not found." });
     return;
   }
-  const artifact = getArtifact(paths.database, jobId);
+  const artifact = await getArtifact(paths.database, jobId);
   if (!artifact) {
     send(response, 404, {
       error: "report_not_ready",
@@ -459,23 +478,20 @@ function sendReport(
   });
   response.end(artifact.body_json);
 }
-
-function sessionBody(paths: RunnerPaths, lab: boolean): Record<string, unknown> {
+async function sessionBody(paths: RunnerPaths, lab: boolean): Promise<Record<string, unknown>> {
   return {
-    live: readLiveGate(paths.env, paths.database),
+    live: await readLiveGate(paths.env, paths.database),
     lab,
   };
 }
-
-function sessionFrom(request: IncomingMessage, paths: RunnerPaths): string | null {
+async function sessionFrom(request: IncomingMessage, paths: RunnerPaths): Promise<string | null> {
   const header = request.headers.cookie ?? "";
   const match = /(?:^|;\s*)ns_session=(ses_[0-9a-f-]{36})/i.exec(header);
   if (!match?.[1]) {
     return null;
   }
-  return getSession(paths.database, match[1]) ? match[1] : null;
+  return (await getSession(paths.database, match[1])) ? match[1] : null;
 }
-
 function sessionCookie(id: string, env: NodeJS.ProcessEnv): Record<string, string> {
   const parts = [`ns_session=${id}`, "HttpOnly", "SameSite=Lax", "Path=/", "Max-Age=604800"];
   if (env.NIGHTSHIFT_COOKIE_SECURE === "1") {
@@ -483,7 +499,6 @@ function sessionCookie(id: string, env: NodeJS.ProcessEnv): Record<string, strin
   }
   return { "set-cookie": parts.join("; ") };
 }
-
 function replyInput(response: ServerResponse, error: unknown): void {
   const status = isNightshiftError(error) && error.code === "payload_too_large" ? 413 : 400;
   const message = isNightshiftError(error) ? error.message : "The dataset could not be read.";
@@ -492,7 +507,6 @@ function replyInput(response: ServerResponse, error: unknown): void {
     message,
   });
 }
-
 async function readJson(request: IncomingMessage): Promise<unknown> {
   const text = await readBody(request);
   if (!text) {
@@ -504,7 +518,6 @@ async function readJson(request: IncomingMessage): Promise<unknown> {
     throw new NightshiftError("invalid_input", "Submit JSON, not another file type.");
   }
 }
-
 async function readBody(request: IncomingMessage): Promise<string> {
   const chunks: Buffer[] = [];
   let size = 0;
@@ -518,14 +531,12 @@ async function readBody(request: IncomingMessage): Promise<string> {
   }
   return Buffer.concat(chunks).toString("utf8");
 }
-
 function requestPath(value: string | undefined): string {
   const raw = value && value.length > 0 ? value : "/";
   const query = raw.indexOf("?");
   const path = query === -1 ? raw : raw.slice(0, query);
   return path.length > 0 ? path : "/";
 }
-
 function sameSecret(left: string, right: string): boolean {
   const a = Buffer.from(left);
   const b = Buffer.from(right);
@@ -534,7 +545,6 @@ function sameSecret(left: string, right: string): boolean {
   }
   return timingSafeEqual(a, b);
 }
-
 function send(
   response: ServerResponse,
   status: number,
@@ -549,8 +559,13 @@ function send(
   });
   response.end(JSON.stringify(body));
 }
-
-function sendFile(response: ServerResponse, file: { file: string; type: string }): void {
+function sendFile(
+  response: ServerResponse,
+  file: {
+    file: string;
+    type: string;
+  },
+): void {
   response.writeHead(200, {
     "content-type": file.type,
     "cache-control": "no-store",
