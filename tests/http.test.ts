@@ -238,7 +238,7 @@ test("restart keeps the finished job and does not open another run", async () =>
     await second.close();
   }
 });
-test("budget, invalid model output, invite, size, and labelled faults stay explicit", async () => {
+test("budget, invalid model output, public access, size, and labelled faults stay explicit", async () => {
   const calls = { n: 0 };
   await withApp(liveEnv("2", "1"), verifyingModel(calls), async (base) => {
     const opened = await session(base);
@@ -283,14 +283,20 @@ test("budget, invalid model output, invite, size, and labelled faults stay expli
     assert.equal(record(stopped.job).escalation_reason, "invalid_model_output");
     assert.equal(invalidCalls.n, 2);
   });
-  await withApp({ NIGHTSHIFT_INVITE_CODE: "desk-code" }, undefined, async (base) => {
-    const missing = await session(base);
-    assert.equal(missing.status, 401);
-    assert.equal(missing.cookie, "");
-    const opened = await session(base, "desk-code");
-    assert.equal(opened.status, 201);
-    assert.match(opened.cookie, /^ns_session=/);
-  });
+  await withApp(
+    { VERCEL: "1", NIGHTSHIFT_COOKIE_SECURE: "1", NIGHTSHIFT_INVITE_CODE: "legacy-unused" },
+    undefined,
+    async (base) => {
+      const response = await fetch(`${base}/api/session`, { method: "POST" });
+      assert.equal(response.status, 201);
+      const cookie = response.headers.get("set-cookie") ?? "";
+      assert.match(cookie, /^ns_session=/);
+      assert.match(cookie, /HttpOnly/);
+      assert.match(cookie, /Secure/);
+      const script = await (await fetch(`${base}/app.js`)).text();
+      assert.doesNotMatch(script, /invite_required|renderInvite/);
+    },
+  );
   await withApp({}, undefined, async (base) => {
     const opened = await session(base);
     const oversized = await fetch(`${base}/api/jobs`, {
@@ -450,11 +456,11 @@ interface ApiResponse {
   body: unknown;
   headers: Headers;
 }
-async function session(base: string, invite?: string): Promise<SessionResponse> {
+async function session(base: string): Promise<SessionResponse> {
   const response = await fetch(`${base}/api/session`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify(invite ? { invite } : {}),
+    body: "{}",
   });
   const body: unknown = await response.json();
   const match = /ns_session=[^;]+/.exec(response.headers.get("set-cookie") ?? "");

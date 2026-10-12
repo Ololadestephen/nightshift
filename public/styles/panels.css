@@ -189,14 +189,6 @@
 .detail-grid .detail-panel {
   margin-bottom: 0;
 }
-.invite-panel {
-  max-width: 540px;
-  padding: 30px;
-}
-.invite-panel > p {
-  font-size: 12px;
-  margin-top: 20px;
-}
 @media (max-width: 900px) {
   .detail-grid {
     grid-template-columns: 1fr;

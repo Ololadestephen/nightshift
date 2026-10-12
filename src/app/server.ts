@@ -1,4 +1,4 @@
-import { randomUUID, timingSafeEqual } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { createReadStream, mkdirSync } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { dirname, join } from "node:path";
@@ -241,40 +241,6 @@ async function createSession(
   if (existing) {
     send(response, 200, await sessionBody(paths, lab));
     return;
-  }
-  const invite = paths.env.NIGHTSHIFT_INVITE_CODE?.trim() ?? "";
-  if (paths.env.VERCEL === "1" && !invite) {
-    send(response, 503, {
-      error: "access_not_configured",
-      message: "Access has not been configured.",
-    });
-    return;
-  }
-  if (invite) {
-    const body = await readJson(request).catch((error: unknown) => {
-      replyInput(response, error);
-      return null;
-    });
-    if (body === null) {
-      return;
-    }
-    const supplied =
-      body && typeof body === "object" && "invite" in body
-        ? String(
-            (
-              body as {
-                invite: unknown;
-              }
-            ).invite,
-          )
-        : "";
-    if (!sameSecret(supplied, invite)) {
-      send(response, 401, {
-        error: "invite_required",
-        message: "Enter the invite code for this server.",
-      });
-      return;
-    }
   }
   const now = paths.clock.now();
   const hourAgo = new Date(now.getTime() - SESSION_WINDOW_MS).toISOString();
@@ -536,14 +502,6 @@ function requestPath(value: string | undefined): string {
   const query = raw.indexOf("?");
   const path = query === -1 ? raw : raw.slice(0, query);
   return path.length > 0 ? path : "/";
-}
-function sameSecret(left: string, right: string): boolean {
-  const a = Buffer.from(left);
-  const b = Buffer.from(right);
-  if (a.length !== b.length) {
-    return false;
-  }
-  return timingSafeEqual(a, b);
 }
 function send(
   response: ServerResponse,

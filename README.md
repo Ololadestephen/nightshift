@@ -13,7 +13,7 @@ Nightshift is an AI operations agent that investigates stalled report jobs, safe
 3. It chooses an allowed repair or escalates when acting would be unsafe.
 4. It checks the report's contents before marking the job complete.
 
-Each browser session sees its own reports. Active leases are protected, repairs are fenced, and model calls have a shared budget cap. Demonstration failures are deliberately induced in a controlled environment.
+The workspace is public, with no invite code. Each browser session sees its own reports. Active leases are protected, repairs are fenced, and model calls have a shared budget cap. Demonstration failures are deliberately induced in a controlled environment.
 
 ## Run locally
 

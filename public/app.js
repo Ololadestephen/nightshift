@@ -58,49 +58,11 @@ async function ensureSession() {
   if (session && !session.error) return true;
   session = await api("/api/session", { method: "POST", body: "{}" });
   if (!session || session.error) {
-    if (session?.error === "invite_required") renderInvite();
-    else {
-      main.replaceChildren(el("h1", "Workspace unavailable"));
-      showAlert(main, session?.message || "The server did not respond. Refresh to try again.");
-    }
+    main.replaceChildren(el("h1", "Workspace unavailable"));
+    showAlert(main, session?.message || "The server did not respond. Refresh to try again.");
     return false;
   }
   return true;
-}
-
-function renderInvite() {
-  main.replaceChildren();
-  const form = document.createElement("form");
-  form.className = "panel invite-panel";
-  form.innerHTML = `
-    <h1>Invite</h1>
-    <p class="muted">Enter your invite code to open the workspace.</p>
-    <div class="field">
-      <label for="invite">Invite code</label>
-      <input id="invite" name="invite" type="text" autocomplete="off" required />
-    </div>
-    <div id="form-alert"></div>
-    <div class="actions"><button type="submit">Open Nightshift</button></div>
-  `;
-  main.append(form);
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const alertBox = form.querySelector("#form-alert");
-    const opened = await api("/api/session", {
-      method: "POST",
-      body: JSON.stringify({ invite: form.querySelector("#invite").value }),
-    });
-    if (!opened || opened.error) {
-      showAlert(
-        alertBox,
-        opened && opened.message ? opened.message : "The invite was not accepted.",
-      );
-      return;
-    }
-    session = opened;
-    if (session.lab) labLink.hidden = false;
-    await render();
-  });
 }
 
 function stopPolling() {
