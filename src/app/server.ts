@@ -66,6 +66,8 @@ const STATIC: Record<
   "/receipt.js": { file: "receipt.js", type: "text/javascript; charset=utf-8" },
   "/landing.css": { file: "landing.css", type: "text/css; charset=utf-8" },
   "/workspace.css": { file: "workspace.css", type: "text/css; charset=utf-8" },
+  "/favicon.svg": { file: "favicon.svg", type: "image/svg+xml" },
+  "/favicon.ico": { file: "favicon.ico", type: "image/x-icon" },
 };
 for (const name of [
   "accessibility",

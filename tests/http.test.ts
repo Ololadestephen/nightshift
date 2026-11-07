@@ -33,12 +33,20 @@ test("submission validates input, writes the report, and keeps sessions apart", 
       "styles/panels.css",
       "styles/jobs.css",
       "styles/report.css",
+      "favicon.svg",
+      "favicon.ico",
     ]) {
       const asset = await fetch(`${base}/${path}`);
       assert.equal(asset.status, 200);
       assert.match(
         asset.headers.get("content-type") ?? "",
-        path.endsWith(".js") ? /javascript/ : /text\/css/,
+        path.endsWith(".js")
+          ? /javascript/
+          : path.endsWith(".svg")
+            ? /svg/
+            : path.endsWith(".ico")
+              ? /x-icon/
+              : /text\/css/,
       );
       assert.match(asset.headers.get("content-security-policy") ?? "", /script-src 'self'/);
     }
