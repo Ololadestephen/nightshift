@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        width: 1500px;
+        height: 500px;
+        background: radial-gradient(circle at 85% 20%, #15324d 0%, #0c1c2b 45%, #050b12 100%);
+        color: #ffffff;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+        overflow: hidden;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 90px 0 380px; /* Leaves room on bottom-left for X avatar */
+      }
+
+      /* Subtle Grid Background */
+      .grid-bg {
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(56, 189, 248, 0.04) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(56, 189, 248, 0.04) 1px, transparent 1px);
+        background-size: 40px 40px;
+        mask-image: radial-gradient(circle at 65% 50%, black 30%, transparent 80%);
+        pointer-events: none;
+      }
+
+      /* Ambient Glows */
+      .glow-right {
+        position: absolute;
+        right: -80px;
+        top: -80px;
+        width: 600px;
+        height: 600px;
+        background: radial-gradient(circle, rgba(56, 189, 248, 0.15) 0%, rgba(14, 165, 233, 0) 70%);
+        filter: blur(40px);
+        pointer-events: none;
+      }
+      .glow-center {
+        position: absolute;
+        left: 350px;
+        top: 100px;
+        width: 400px;
+        height: 300px;
+        background: radial-gradient(circle, rgba(14, 165, 233, 0.1) 0%, transparent 70%);
+        filter: blur(50px);
+        pointer-events: none;
+      }
+
+      .left-content {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        z-index: 2;
+        max-width: 640px;
+      }
+
+      .partner-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        background: rgba(14, 165, 233, 0.12);
+        border: 1px solid rgba(56, 189, 248, 0.35);
+        border-radius: 9999px;
+        padding: 7px 18px;
+        width: fit-content;
+        box-shadow: 0 0 20px rgba(56, 189, 248, 0.15);
+      }
+      .partner-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #10b981;
+        box-shadow: 0 0 8px #10b981;
+      }
+      .partner-text {
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.8px;
+        text-transform: uppercase;
+        color: #7dd3fc;
+      }
+
+      .brand-title {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        font-size: 64px;
+        font-weight: 800;
+        letter-spacing: -2px;
+        line-height: 1;
+        color: #ffffff;
+      }
+      .brand-title svg {
+        width: 58px;
+        height: 58px;
+        color: #38bdf8;
+        filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.6));
+      }
+      .period {
+        color: #38bdf8;
+        margin-left: -4px;
+      }
+
+      .tagline {
+        font-size: 21px;
+        font-weight: 500;
+        color: #e0f2fe;
+        line-height: 1.35;
+        letter-spacing: -0.3px;
+      }
+      .subtext {
+        font-size: 14px;
+        color: #94a3b8;
+        line-height: 1.5;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .bullet {
+        color: #38bdf8;
+        font-weight: bold;
+      }
+
+      /* Right Feature Card */
+      .right-card {
+        z-index: 2;
+        background: rgba(11, 24, 38, 0.7);
+        backdrop-filter: blur(16px);
+        border: 1px solid rgba(56, 189, 248, 0.25);
+        border-radius: 20px;
+        padding: 28px 32px;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        width: 400px;
+        box-shadow:
+          0 20px 40px rgba(0, 0, 0, 0.4),
+          inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      }
+      .card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .card-badge {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #38bdf8;
+        background: rgba(56, 189, 248, 0.15);
+        padding: 4px 10px;
+        border-radius: 6px;
+      }
+      .card-chain {
+        font-size: 12px;
+        color: #94a3b8;
+        font-weight: 600;
+      }
+      .card-items {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .card-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 13.5px;
+        color: #cbd5e1;
+      }
+      .check-icon {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: rgba(16, 185, 129, 0.2);
+        color: #34d399;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        font-weight: bold;
+        flex-shrink: 0;
+      }
+      .contract-pill {
+        background: rgba(15, 23, 42, 0.8);
+        border: 1px dashed rgba(56, 189, 248, 0.35);
+        border-radius: 8px;
+        padding: 10px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .contract-label {
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        color: #64748b;
+      }
+      .contract-address {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 12.5px;
+        color: #38bdf8;
+      }
+      .web-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 6px;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        font-size: 12px;
+        color: #64748b;
+      }
+      .web-url {
+        color: #e2e8f0;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="grid-bg"></div>
+    <div class="glow-right"></div>
+    <div class="glow-center"></div>
+
+    <div class="left-content">
+      <div class="partner-pill">
+        <span class="partner-dot"></span>
+        <span class="partner-text">Live on BOT Chain Mainnet</span>
+      </div>
+      <h1 class="brand-title">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path
+            d="M20.5 13A8.5 8.5 0 0 1 11 3.5 8.5 8.5 0 1 0 20.5 13Z"
+            fill="#38bdf8"
+            fill-opacity="0.3"
+          />
+          <path d="m17 3 .5 1.5L19 5l-1.5.5L17 7l-.5-1.5L15 5l1.5-.5Z" fill="#ffffff" />
+        </svg>
+        Nightshift<span class="period">.</span>
+      </h1>
+      <p class="tagline">Autonomous AI operations agent for stalled reports.</p>
+      <div class="subtext">
+        <span>Bounded repair actions</span>
+        <span class="bullet">·</span>
+        <span>Checkpoint resumption</span>
+        <span class="bullet">·</span>
+        <span>On-chain receipts</span>
+      </div>
+    </div>
+
+    <div class="right-card">
+      <div class="card-header">
+        <span class="card-badge">BOT Chain Ecosystem</span>
+        <span class="card-chain">Chain ID: 677</span>
+      </div>
+      <div class="card-items">
+        <div class="card-item">
+          <span class="check-icon">✓</span>
+          <span>Deterministic lease fencing & retry</span>
+        </div>
+        <div class="card-item">
+          <span class="check-icon">✓</span>
+          <span>Artifact integrity verification</span>
+        </div>
+        <div class="card-item">
+          <span class="check-icon">✓</span>
+          <span>NightshiftReceiptRegistry on-chain</span>
+        </div>
+      </div>
+      <div class="contract-pill">
+        <span class="contract-label">Verified Mainnet Registry</span>
+        <span class="contract-address">0x8706c23CB5Ab5606...a7cB</span>
+      </div>
+      <div class="web-footer">
+        <span class="web-url">trynightshift.vercel.app</span>
+        <span>botchain.ai</span>
+      </div>
+    </div>
+  </body>
+</html>

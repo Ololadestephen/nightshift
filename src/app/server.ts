@@ -81,6 +81,15 @@ for (const name of [
 ]) {
   STATIC[`/styles/${name}.css`] = { file: `styles/${name}.css`, type: "text/css; charset=utf-8" };
 }
+for (const brandAsset of [
+  "x-pfp.svg",
+  "x-pfp.png",
+  "x-cover.png",
+  "partnership-announcement.png",
+]) {
+  const ext = brandAsset.endsWith(".svg") ? "image/svg+xml" : "image/png";
+  STATIC[`/brand/${brandAsset}`] = { file: `brand/${brandAsset}`, type: ext };
+}
 export interface AppOptions {
   root: string;
   env: NodeJS.ProcessEnv;

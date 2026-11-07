@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        width: 1200px;
+        height: 675px;
+        background: radial-gradient(circle at 50% 20%, #15344f 0%, #0d1e2e 50%, #050a10 100%);
+        color: #ffffff;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+        overflow: hidden;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 60px 70px;
+      }
+
+      /* Subtle Grid Background */
+      .grid-bg {
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(56, 189, 248, 0.05) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(56, 189, 248, 0.05) 1px, transparent 1px);
+        background-size: 48px 48px;
+        mask-image: radial-gradient(circle at 50% 50%, black 40%, transparent 85%);
+        pointer-events: none;
+      }
+
+      /* Ambient Glows */
+      .glow-top {
+        position: absolute;
+        top: -120px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 700px;
+        height: 500px;
+        background: radial-gradient(circle, rgba(56, 189, 248, 0.22) 0%, rgba(14, 165, 233, 0) 70%);
+        filter: blur(60px);
+        pointer-events: none;
+      }
+
+      .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        z-index: 2;
+      }
+      .badge-announcement {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(14, 165, 233, 0.12);
+        border: 1px solid rgba(56, 189, 248, 0.4);
+        padding: 8px 20px;
+        border-radius: 9999px;
+        font-size: 13px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #7dd3fc;
+        box-shadow: 0 0 25px rgba(56, 189, 248, 0.2);
+      }
+      .pulse-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #10b981;
+        box-shadow: 0 0 10px #10b981;
+      }
+      .network-tag {
+        font-size: 13px;
+        color: #94a3b8;
+        font-weight: 600;
+        background: rgba(255, 255, 255, 0.05);
+        padding: 8px 16px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      /* Center Hero Partnership Block */
+      .main-body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 20px;
+        z-index: 2;
+        margin-top: 10px;
+      }
+
+      .logo-row {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        margin-bottom: 5px;
+      }
+      .brand-mark {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 38px;
+        font-weight: 800;
+        letter-spacing: -1px;
+      }
+      .brand-mark svg {
+        width: 44px;
+        height: 44px;
+        color: #38bdf8;
+        filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.6));
+      }
+      .times {
+        font-size: 28px;
+        color: #64748b;
+        font-weight: 300;
+      }
+      .partner-mark {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 38px;
+        font-weight: 800;
+        letter-spacing: -1px;
+        color: #38bdf8;
+      }
+
+      .headline {
+        font-size: 48px;
+        font-weight: 800;
+        line-height: 1.15;
+        letter-spacing: -1.5px;
+        max-width: 900px;
+        background: linear-gradient(180deg, #ffffff 40%, #cbd5e1 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .description {
+        font-size: 19px;
+        color: #94a3b8;
+        max-width: 800px;
+        line-height: 1.5;
+        font-weight: 400;
+      }
+
+      /* 3-Column Highlights */
+      .features-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+        width: 100%;
+        z-index: 2;
+      }
+      .feature-box {
+        background: rgba(15, 23, 42, 0.65);
+        border: 1px solid rgba(56, 189, 248, 0.2);
+        border-radius: 14px;
+        padding: 20px 22px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        text-align: left;
+        backdrop-filter: blur(12px);
+      }
+      .feature-box h4 {
+        font-size: 15px;
+        font-weight: 700;
+        color: #e0f2fe;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .feature-box p {
+        font-size: 13px;
+        color: #94a3b8;
+        line-height: 1.45;
+      }
+
+      /* Bottom Footer Info */
+      .footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        z-index: 2;
+        padding-top: 16px;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        font-size: 13px;
+      }
+      .contract-tag {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        color: #38bdf8;
+        background: rgba(56, 189, 248, 0.1);
+        padding: 6px 14px;
+        border-radius: 6px;
+        border: 1px solid rgba(56, 189, 248, 0.25);
+      }
+      .links-row {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        color: #64748b;
+      }
+      .links-row strong {
+        color: #e2e8f0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="grid-bg"></div>
+    <div class="glow-top"></div>
+
+    <div class="header">
+      <div class="badge-announcement">
+        <span class="pulse-dot"></span>
+        <span>Ecosystem Partnership Announcement</span>
+      </div>
+      <div class="network-tag">BOT Chain Mainnet (Chain ID 677)</div>
+    </div>
+
+    <div class="main-body">
+      <div class="logo-row">
+        <div class="brand-mark">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              d="M20.5 13A8.5 8.5 0 0 1 11 3.5 8.5 8.5 0 1 0 20.5 13Z"
+              fill="#38bdf8"
+              fill-opacity="0.3"
+            />
+            <path d="m17 3 .5 1.5L19 5l-1.5.5L17 7l-.5-1.5L15 5l1.5-.5Z" fill="#ffffff" />
+          </svg>
+          Nightshift.
+        </div>
+        <span class="times">✕</span>
+        <div class="partner-mark">BOT Chain</div>
+      </div>
+
+      <h1 class="headline">Autonomous AI Operations with Verifiable On-Chain Integrity</h1>
+
+      <p class="description">
+        Nightshift brings autonomous report recovery to BOT Chain Mainnet—pairing bounded repair
+        operations with immutable completion receipts on NightshiftReceiptRegistry.
+      </p>
+    </div>
+
+    <div class="features-row">
+      <div class="feature-box">
+        <h4><span>🛡️</span> Bounded Agent Loop</h4>
+        <p>
+          Inspects worker leases, reads durable checkpoints, and executes allowlisted repairs
+          without arbitrary access.
+        </p>
+      </div>
+      <div class="feature-box">
+        <h4><span>🔒</span> Zero-Leak Privacy</h4>
+        <p>
+          Publishes only 32-byte cryptographic fingerprints—keeping raw datasets, prompts, and
+          tokens strictly off-chain.
+        </p>
+      </div>
+      <div class="feature-box">
+        <h4><span>📜</span> Mainnet Registry</h4>
+        <p>
+          Immutable attestation of report deliverables, verified live on BOTScan with zero external
+          dependencies.
+        </p>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="contract-tag">
+        NightshiftReceiptRegistry: 0x8706c23CB5Ab5606EA3e0F13Cb4c8B4d58E0a7cB
+      </div>
+      <div class="links-row">
+        <span>Web: <strong>trynightshift.vercel.app</strong></span>
+        <span>Explorer: <strong>scan.botchain.ai</strong></span>
+      </div>
+    </div>
+  </body>
+</html>
