@@ -6,6 +6,8 @@
 node_modules/
 dist/
 build/
+out/
+cache/
 coverage/
 test-results/
 playwright-report/
@@ -25,9 +27,11 @@ docs/JUDGING_REVIEW.md
 skills-lock.json
 films/
 PLAN.md
+plan.md
 START_HERE.md
 docs/EVENT_AND_SUBMISSION.md
 AGENTS.md
+AGENT_GUIDE.md
 docs/
 .cursor/
 .entire/

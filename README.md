@@ -12,8 +12,9 @@ Nightshift is an AI operations agent that investigates stalled report jobs, safe
 2. Nightshift inspects the job, worker lease, checkpoints and errors.
 3. It chooses an allowed repair or escalates when acting would be unsafe.
 4. It checks the report's contents before marking the job complete.
+5. For verified completed reports, you can export a sanitized completion snapshot, connect a wallet on BOT Chain, publish a completion receipt to `NightshiftReceiptRegistry`, and compare exported snapshots against on-chain receipts.
 
-The workspace is public, with no invite code. Each browser session sees its own reports. Active leases are protected, repairs are fenced, and model calls have a shared budget cap. Demonstration failures are deliberately induced in a controlled environment.
+The workspace is public, with no invite code. Each browser session sees its own reports. Active leases are protected, repairs are fenced, and model calls have a shared budget cap. Demonstration failures are deliberately induced in a controlled environment. Completion receipts commit only publisher attribution and 32-byte fingerprints (versioned job reference, input hash, output hash, and sanitized recovery summary) without placing raw datasets, prompts, or credentials on-chain.
 
 ## Run locally
 

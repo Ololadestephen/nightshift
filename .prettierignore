@@ -1,5 +1,7 @@
 node_modules
 dist
+out
+cache
 coverage
 data
 .desloppify
@@ -13,6 +15,7 @@ docs
 .entire
 .vercel
 AGENTS.md
+AGENT_GUIDE.md
 PLAN.md
 START_HERE.md
 hackathon.md

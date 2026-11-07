@@ -1,5 +1,6 @@
 import { icon, pageHeading, setShell, verificationState } from "./ui.js";
 import { renderLanding } from "./landing.js";
+import { renderReceiptSection } from "./receipt.js";
 import {
   renderOverview,
   renderJobs,
@@ -294,6 +295,9 @@ async function renderJob(jobId) {
     recordSection(detail),
     reportSection(detail, jobId),
   );
+  if (verificationState(detail) === "verified") {
+    grid.append(renderReceiptSection(detail, jobId, api));
+  }
   main.append(head, grid);
   shown = signature(detail);
   watchJob(jobId, detail);
@@ -334,6 +338,9 @@ async function refreshJob(jobId) {
     recordSection(detail),
     reportSection(detail, jobId),
   );
+  if (verificationState(detail) === "verified") {
+    fresh.append(renderReceiptSection(detail, jobId, api));
+  }
   main.querySelector(".detail-grid")?.replaceChildren(...fresh.children);
   if (reportOpen && main.querySelector(".report-data")) {
     main.querySelector(".report-data").open = true;

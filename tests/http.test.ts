@@ -22,6 +22,7 @@ test("submission validates input, writes the report, and keeps sessions apart", 
       "ui.js",
       "landing.js",
       "workspace.js",
+      "receipt.js",
       "landing.css",
       "workspace.css",
       "styles/accessibility.css",
@@ -93,6 +94,11 @@ test("submission validates input, writes the report, and keeps sessions apart", 
     assert.equal(hidden.status, 404);
     const hiddenReport = await call(base, `/api/jobs/${jobId}/report`, other.cookie);
     assert.equal(hiddenReport.status, 404);
+    const hiddenSnapshot = await call(base, `/api/jobs/${jobId}/snapshot`, other.cookie);
+    assert.equal(hiddenSnapshot.status, 404);
+    const prematureSnapshot = await call(base, `/api/jobs/${jobId}/snapshot`, opened.cookie);
+    assert.equal(prematureSnapshot.status, 409);
+    assert.equal(record(prematureSnapshot.body).error, "job_not_completed");
     const lab = await call(base, "/api/lab/jobs", opened.cookie, {
       method: "POST",
       body: JSON.stringify({ scenario: "expired_lease" }),
@@ -144,6 +150,14 @@ test("an injected model verifies once and a repeat start does not spend again", 
     assert.equal(record(repeat.body).created, false);
     assert.equal(record(record(repeat.body).run).id, run.id);
     assert.equal(calls.n, 2);
+    const snap = await call(base, `/api/jobs/${jobId}/snapshot`, opened.cookie);
+    assert.equal(snap.status, 200);
+    const snapshot = record(record(snap.body).snapshot);
+    assert.equal(snapshot.format, "nightshift-completion-snapshot/v1");
+    assert.equal(record(snapshot.report).total_minutes, 19);
+    const other = await session(base);
+    const crossSessionSnap = await call(base, `/api/jobs/${jobId}/snapshot`, other.cookie);
+    assert.equal(crossSessionSnap.status, 404);
   });
 });
 test("a second click during a run and a second job share one model call", async () => {

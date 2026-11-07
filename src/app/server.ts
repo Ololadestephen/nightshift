@@ -23,6 +23,7 @@ import {
 } from "../store.js";
 import { createJob } from "../pipeline.js";
 import { readLiveGate } from "./budget.js";
+import { botChainConfigFromEnv, buildCompletionSnapshot } from "../snapshot.js";
 import {
   assignJob,
   countOwnedJobs,
@@ -62,6 +63,7 @@ const STATIC: Record<
   "/ui.js": { file: "ui.js", type: "text/javascript; charset=utf-8" },
   "/landing.js": { file: "landing.js", type: "text/javascript; charset=utf-8" },
   "/workspace.js": { file: "workspace.js", type: "text/javascript; charset=utf-8" },
+  "/receipt.js": { file: "receipt.js", type: "text/javascript; charset=utf-8" },
   "/landing.css": { file: "landing.css", type: "text/css; charset=utf-8" },
   "/workspace.css": { file: "workspace.css", type: "text/css; charset=utf-8" },
 };
@@ -197,7 +199,9 @@ export async function handle(
     });
     return;
   }
-  const jobMatch = /^\/api\/jobs\/(job_[0-9a-f-]{36})(\/report|\/runs)?$/i.exec(pathname);
+  const jobMatch = /^\/api\/jobs\/(job_[0-9a-f-]{36})(\/report|\/snapshot|\/runs)?$/i.exec(
+    pathname,
+  );
   if (!jobMatch || !jobMatch[1]) {
     send(response, 404, { error: "not_found", message: "That page does not exist." });
     return;
@@ -215,6 +219,10 @@ export async function handle(
   }
   if (method === "GET" && suffix === "/report") {
     await sendReport(response, paths, jobId, sessionId);
+    return;
+  }
+  if (method === "GET" && suffix === "/snapshot") {
+    await sendSnapshot(response, paths, jobId, sessionId);
     return;
   }
   if (method === "POST" && suffix === "/runs") {
@@ -376,6 +384,7 @@ async function jobDetail(
       : null,
     run: run ? publicRun(run) : null,
     live: await readLiveGate(paths.env, paths.database),
+    botchain: botChainConfigFromEnv(paths.env),
     environment: summary.auto_finish === 0 ? "controlled_fault_injection" : "report",
   };
 }
@@ -444,9 +453,39 @@ async function sendReport(
   });
   response.end(artifact.body_json);
 }
+async function sendSnapshot(
+  response: ServerResponse,
+  paths: RunnerPaths,
+  jobId: string,
+  sessionId: string,
+): Promise<void> {
+  try {
+    const snapshot = await buildCompletionSnapshot(paths.database, jobId, sessionId, paths.clock);
+    send(response, 200, {
+      snapshot,
+      botchain: botChainConfigFromEnv(paths.env),
+    });
+  } catch (error) {
+    if (isNightshiftError(error)) {
+      const status =
+        error.code === "not_found"
+          ? 404
+          : error.code === "job_not_completed" || error.code === "verification_failed"
+            ? 409
+            : 400;
+      send(response, status, { error: error.code, message: error.message });
+      return;
+    }
+    send(response, 500, {
+      error: "snapshot_failed",
+      message: "The completion snapshot could not be prepared.",
+    });
+  }
+}
 async function sessionBody(paths: RunnerPaths, lab: boolean): Promise<Record<string, unknown>> {
   return {
     live: await readLiveGate(paths.env, paths.database),
+    botchain: botChainConfigFromEnv(paths.env),
     lab,
   };
 }
@@ -528,7 +567,7 @@ function sendFile(
     "content-type": file.type,
     "cache-control": "no-store",
     "content-security-policy":
-      "default-src 'self'; style-src 'self'; script-src 'self'; base-uri 'none'; form-action 'self'",
+      "default-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self' https://rpc.botchain.ai https://rpc.bohr.life; base-uri 'none'; form-action 'self'",
     "x-content-type-options": "nosniff",
   });
   createReadStream(join(PUBLIC_DIR, file.file)).pipe(response);
